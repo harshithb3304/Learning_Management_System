@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Learning Management System (LMS)
+
+A role-based Learning Management System inspired by Google Classroom. This application provides a comprehensive platform for administrators, teachers, and students to manage courses, enrollments, and coursework.
+
+## Features
+
+### Authentication
+- Supabase Auth with Google Login
+- Role-based access control (RBAC) using Supabase Policies & Auth
+- Role-based access (Admin / Teacher / Student)
+
+### Dashboard
+- Unified layout with scoped content per role
+- Responsive & accessible design with shadcn/ui components
+
+### Role-Based Features
+
+#### Admin Capabilities
+- Manage all users (Create, Update, Delete)
+- Assign roles (Teacher / Student)
+- Manage all courses (CRUD)
+
+#### Teacher Capabilities
+- Create, Update, Delete own courses
+- Manage students within own courses (Add / Remove)
+- Upload and manage coursework
+
+#### Student Capabilities
+- View enrolled courses
+- Access coursework within enrolled courses
+
+## Tech Stack
+
+| Layer        | Tech                        |
+|--------------|-----------------------------|  
+| Frontend     | Next.js, Tailwind CSS, shadcn/ui |
+| Backend/API  | Supabase Edge Functions (Optional for server logic) |
+| Auth         | Supabase Auth (Google Login only) + RBAC using Policies |
+| Database     | Supabase Postgres |
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ and npm
+- Supabase account and project
+
+### Environment Setup
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Database Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Create a new Supabase project
+2. Set up the following tables in your Supabase database:
+   - users
+   - courses
+   - enrollments
+   - coursework
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Configure authentication with Google OAuth provider
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Install dependencies
+npm install
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Run the development server
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-## Deploy on Vercel
+## Application Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/                    # Next.js app directory
+│   ├── auth/               # Authentication pages
+│   ├── dashboard/          # Dashboard and role-based pages
+│   └── page.tsx            # Landing page
+├── components/             # React components
+│   ├── layout/             # Layout components
+│   └── ui/                 # UI components from shadcn/ui
+├── lib/                    # Utility functions
+│   └── supabase/           # Supabase client setup
+└── types/                  # TypeScript type definitions
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+This application can be deployed to Vercel or any other platform that supports Next.js applications.
+
+```bash
+# Build the application
+npm run build
+
+# Start the production server
+npm start
+```
+
+## Resources
+
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [shadcn/ui Documentation](https://ui.shadcn.com/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)

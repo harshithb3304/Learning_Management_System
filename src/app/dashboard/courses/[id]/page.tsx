@@ -1,0 +1,489 @@
+import { redirect } from 'next/navigation'
+import { format } from 'date-fns'
+import DashboardLayout from '@/components/layout/dashboard-layout'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog'
+import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth-utils'
+import { addCoursework, enrollStudent, unenrollStudent } from '@/actions/courses'
+
+interface User {
+  id: string
+  email: string
+  full_name: string
+  role: string
+  avatar_url?: string
+  createdAt: Date
+}
+
+interface Course {
+  id: string
+  title: string
+  description: string | null
+  teacherId: string
+  createdAt: Date
+  teacher: User | null
+}
+
+interface Enrollment {
+  id: string
+  studentId: string
+  courseId: string
+  createdAt: Date
+  student: User | null
+}
+
+interface Coursework {
+  id: string
+  title: string
+  description: string | null
+  courseId: string
+  dueDate: Date | null
+  createdAt: Date
+}
+
+interface CoursePageProps {
+  params: {
+    id: string
+  }
+}
+
+export default async function CoursePage({ params }: CoursePageProps) {
+  // Get current user with Prisma
+  const { user } = await getCurrentUser()
+  
+  if (!user) {
+    redirect('/auth/login')
+  }
+  
+  // Fetch course details with Prisma
+  const course: Course = await prisma.course.findUnique({
+    where: {
+      id: params.id
+    },
+    include: {
+      teacher: true
+    }
+  })
+  
+  if (!course) {
+    redirect('/dashboard/courses')
+  }
+  
+  // Check if user has permission to view this course
+  if (user.role === 'teacher' && course.teacherId !== user.id) {
+    redirect('/dashboard/courses')
+  }
+  
+  if (user.role === 'student') {
+    // Check if student is enrolled in this course
+    const enrollment = await prisma.enrollment.findFirst({
+      where: {
+        courseId: params.id,
+        studentId: user.id
+      }
+    })
+    
+    if (!enrollment) {
+      redirect('/dashboard/my-courses')
+    }
+  }
+  
+  // Fetch enrolled students with Prisma
+  const enrollments = await prisma.enrollment.findMany({
+    where: {
+      courseId: params.id
+    },
+    include: {
+      student: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+  
+  const enrolledStudents = enrollments || []
+  
+  // Fetch coursework with Prisma
+  const coursework = await prisma.coursework.findMany({
+    where: {
+      courseId: params.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+  
+  const courseContent = coursework || []
+  
+  // Server actions wrapper functions
+  const handleAddCoursework = async (formData: FormData) => {
+    'use server'
+    
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const dueDate = formData.get('due_date') as string
+    
+    if (!title) {
+      console.error('Title is required')
+      return
+    }
+    
+    const { error } = await addCoursework({
+      title,
+      description,
+      courseId: params.id,
+      dueDate: dueDate || undefined,
+    })
+    
+    if (error) {
+      console.error('Error adding coursework:', error)
+      return
+    }
+    
+    redirect(`/dashboard/courses/${params.id}?tab=content`)
+  }
+  
+  const handleEnrollStudent = async (formData: FormData) => {
+    'use server'
+    
+    const studentId = formData.get('student_id') as string
+    
+    if (!studentId) {
+      console.error('Student ID is required')
+      return
+    }
+    
+    const { error } = await enrollStudent({
+      courseId: params.id,
+      studentId
+    })
+    
+    if (error) {
+      console.error('Error enrolling student:', error)
+      return
+    }
+    
+    redirect(`/dashboard/courses/${params.id}?tab=students`)
+  }
+  
+  // Fetch available students for enrollment (not already enrolled)
+  interface AvailableStudent {
+    id: string;
+    full_name: string;
+    email: string;
+  }
+
+  let availableStudents: AvailableStudent[] = []
+  if (user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) {
+    const enrolledStudentIds = enrolledStudents.map(e => e.studentId)
+    
+    // Get all students who are not enrolled in this course
+    const students = await prisma.user.findMany({
+      where: {
+        role: 'student',
+        id: {
+          notIn: enrolledStudentIds
+        }
+      },
+      select: {
+        id: true,
+        full_name: true,
+        email: true
+      }
+    })
+    
+    availableStudents = students || []
+  }
+  
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{course.title}</h1>
+            <p className="text-muted-foreground">
+              {course.description || 'No description provided'}
+            </p>
+          </div>
+          {(user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) && (
+            <Button variant="outline" asChild>
+              <a href={`/dashboard/courses/${params.id}/edit`}>Edit Course</a>
+            </Button>
+          )}
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Course Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm font-medium">Teacher</p>
+                <p className="text-sm text-muted-foreground">
+                  {course.teacher?.full_name || 'Unknown'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Created</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(course.createdAt), 'MMMM d, yyyy')}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Enrolled Students</p>
+                <p className="text-sm text-muted-foreground">
+                  {enrolledStudents.length}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Course Content</p>
+                <p className="text-sm text-muted-foreground">
+                  {courseContent.length} item{courseContent.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Tabs defaultValue="content">
+          <TabsList>
+            <TabsTrigger value="content">Course Content</TabsTrigger>
+            <TabsTrigger value="students">Students</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="content" className="space-y-4">
+            {(user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add Course Content</CardTitle>
+                  <CardDescription>
+                    Add new coursework, assignments, or materials
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form action={handleAddCoursework} className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label htmlFor="title" className="text-sm font-medium">Title</label>
+                        <input
+                          id="title"
+                          name="title"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2"
+                          placeholder="Lesson 1: Introduction"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="due_date" className="text-sm font-medium">Due Date (Optional)</label>
+                        <input
+                          id="due_date"
+                          name="due_date"
+                          type="date"
+                          className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="description" className="text-sm font-medium">Description</label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        rows={3}
+                        placeholder="Describe the content or assignment..."
+                      ></textarea>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="submit">Add Content</Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Course Content</CardTitle>
+                <CardDescription>
+                  {courseContent.length} item{courseContent.length !== 1 ? 's' : ''} found
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {courseContent.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {courseContent.map((item: Coursework) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.title}</TableCell>
+                          <TableCell>{item.description || 'No description'}</TableCell>
+                          <TableCell>
+                            {item.dueDate 
+                              ? format(new Date(item.dueDate), 'MMM d, yyyy') 
+                              : 'No due date'}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(item.createdAt), 'MMM d, yyyy')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex h-32 items-center justify-center">
+                    <p className="text-center text-muted-foreground">
+                      No content has been added to this course yet.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="students" className="space-y-4">
+            {(user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Manage Students</CardTitle>
+                  <CardDescription>
+                    Enroll or remove students from this course
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-end">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>Enroll Student</Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Enroll Student</DialogTitle>
+                          <DialogDescription>
+                            Select a student to enroll in this course
+                          </DialogDescription>
+                        </DialogHeader>
+                        <form action={handleEnrollStudent} className="space-y-4 pt-4">
+                          <div className="space-y-2">
+                            <label htmlFor="student_id" className="text-sm font-medium">Student</label>
+                            <select
+                              id="student_id"
+                              name="student_id"
+                              className="w-full rounded-md border border-input bg-background px-3 py-2"
+                              required
+                            >
+                              <option value="">Select a student</option>
+                              {availableStudents.map((student: { id: string; full_name: string; email: string }) => (
+                                <option key={student.id} value={student.id}>
+                                  {student.full_name} ({student.email})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button type="submit">Enroll</Button>
+                          </div>
+                        </form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Enrolled Students</CardTitle>
+                <CardDescription>
+                  {enrolledStudents.length} student{enrolledStudents.length !== 1 ? 's' : ''} enrolled
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {enrolledStudents.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Enrolled On</TableHead>
+                        {(user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) && (
+                          <TableHead className="text-right">Actions</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {enrolledStudents.map((enrollment: Enrollment) => (
+                        <TableRow key={enrollment.id}>
+                          <TableCell className="font-medium">{enrollment.student?.full_name || 'Unknown'}</TableCell>
+                          <TableCell>{enrollment.student?.email || 'Unknown'}</TableCell>
+                          <TableCell>
+                            {format(new Date(enrollment.createdAt), 'MMM d, yyyy')}
+                          </TableCell>
+                          {(user.role === 'admin' || (user.role === 'teacher' && course.teacherId === user.id)) && (
+                            <TableCell className="text-right">
+                              <form action={async () => {
+                                'use server'
+                                await unenrollStudent(enrollment.id)
+                                return redirect(`/dashboard/courses/${params.id}?tab=students`)
+                              }}>
+                                <Button variant="ghost" size="sm" type="submit">
+                                  Remove
+                                </Button>
+                              </form>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex h-32 items-center justify-center">
+                    <p className="text-center text-muted-foreground">
+                      No students are enrolled in this course yet.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
+  )
+}
