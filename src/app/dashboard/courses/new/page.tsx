@@ -1,167 +1,166 @@
-import { redirect } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import DashboardLayout from '@/components/layout/dashboard-layout'
-import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/auth-utils'
-import { createCourse } from '@/actions/courses'
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth-utils";
+import { createCourse } from "@/actions/courses";
+import Link from "next/link";
 
 export default async function NewCoursePage() {
   // Get current user with Prisma
-  const { user } = await getCurrentUser()
-  
+  const { user } = await getCurrentUser();
+
   if (!user) {
-    redirect('/auth/login')
+    redirect("/auth/login");
   }
-  
+
   // Only admin and teacher roles can access this page
-  if (user.role !== 'admin' && user.role !== 'teacher') {
-    redirect('/dashboard')
+  if (user.role !== "admin" && user.role !== "teacher") {
+    redirect("/dashboard");
   }
-  
+
   const handleCreateCourse = async (formData: FormData) => {
-    'use server'
-    
-    const title = formData.get('title') as string
-    const description = formData.get('description') as string
-    
+    "use server";
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+
     if (!title) {
-      console.error('Title is required')
-      return
+      console.error("Title is required");
+      return;
     }
-    
+
     // Get current user with Prisma
-    const { user } = await getCurrentUser()
-    
+    const { user } = await getCurrentUser();
+
     if (!user) {
-      redirect('/auth/login')
+      redirect("/auth/login");
     }
-    
+
     // For admin, we need to check if they specified a teacher_id
-    let teacherId = user.id
-    
-    if (user.role === 'admin') {
-      const selectedTeacherId = formData.get('teacher_id') as string
+    let teacherId = user.id;
+
+    if (user.role === "admin") {
+      const selectedTeacherId = formData.get("teacher_id") as string;
       if (selectedTeacherId) {
-        teacherId = selectedTeacherId
+        teacherId = selectedTeacherId;
       }
     }
-    
+
     const { error } = await createCourse({
       title,
       description,
-      teacherId
-    })
-    
+      teacherId,
+    });
+
     if (error) {
-      console.error('Error creating course:', error)
-      return
+      console.error("Error creating course:", error);
+      return;
     }
-    
-    redirect('/dashboard/courses')
-  }
-  
+
+    redirect("/dashboard/courses");
+  };
+
   // If admin, fetch all teachers for the dropdown
   interface Teacher {
     id: string;
     full_name: string;
   }
-  
-  let teachers: Teacher[] = []
-  if (user.role === 'admin') {
+
+  let teachers: Teacher[] = [];
+  if (user.role === "admin") {
     // Get all teachers with Prisma
     const teacherUsers = await prisma.user.findMany({
       where: {
-        role: 'teacher'
+        role: "teacher",
       },
       select: {
         id: true,
-        full_name: true
-      }
-    })
-    
-    teachers = teacherUsers || []
+        full_name: true,
+      },
+    });
+
+    teachers = teacherUsers || [];
   }
-  
+
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create New Course</h1>
-          <p className="text-muted-foreground">
-            Add a new course to the learning management system
-          </p>
-        </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Details</CardTitle>
-            <CardDescription>
-              Enter the details for the new course
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={handleCreateCourse} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Course Title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  placeholder="Introduction to Programming"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Course Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="A comprehensive introduction to programming concepts..."
-                  rows={4}
-                />
-              </div>
-              
-              {user.role === 'admin' && teachers.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="teacher_id">Assign Teacher</Label>
-                  <select
-                    id="teacher_id"
-                    name="teacher_id"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2"
-                  >
-                    <option value="">Select a teacher</option>
-                    {teachers.map((teacher) => (
-                      <option key={teacher.id} value={teacher.id}>
-                        {teacher.full_name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty to assign yourself as the teacher
-                  </p>
-                </div>
-              )}
-              
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" asChild>
-                  <a href="/dashboard/courses">Cancel</a>
-                </Button>
-                <Button type="submit">Create Course</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Create New Course</h1>
+        <p className="text-muted-foreground">
+          Add a new course to the learning management system
+        </p>
       </div>
-    </DashboardLayout>
-  )
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Course Details</CardTitle>
+          <CardDescription>
+            Enter the details for the new course
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={handleCreateCourse} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Course Title</Label>
+              <Input
+                id="title"
+                name="title"
+                placeholder="Introduction to Programming"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Course Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="A comprehensive introduction to programming concepts..."
+                rows={4}
+              />
+            </div>
+
+            {user.role === "admin" && teachers.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="teacher_id">Assign Teacher</Label>
+                <select
+                  id="teacher_id"
+                  name="teacher_id"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                >
+                  <option value="">Select a teacher</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.full_name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to assign yourself as the teacher
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" asChild>
+                <Link href="/dashboard/courses">Cancel</Link>
+              </Button>
+              <Button type="submit">Create Course</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
