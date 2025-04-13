@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,19 +25,30 @@ export default async function LoginPage() {
     "use server";
 
     const supabase = await createClient();
+    const isLocalEnv = process.env.NODE_ENV === "development";
+    const baseUrl = isLocalEnv
+      ? "http://localhost:3000"
+      : process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "";
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        redirectTo: `${baseUrl}/auth/callback`,
       },
     });
 
-    if (error) {
-      console.error("Error signing in with Google:", error);
-      return;
+    if (data.url) {
+      redirect(data.url);
     }
 
-    redirect(data.url);
+    if (error) {
+      redirect("/error");
+    }
+
+    revalidatePath("/", "layout");
+    redirect("/");
   };
 
   const signInWithEmail = async (formData: FormData) => {
