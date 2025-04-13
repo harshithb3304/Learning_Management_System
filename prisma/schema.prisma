@@ -44,6 +44,7 @@ model Course {
   teacher     User        @relation("TeacherCourses", fields: [teacherId], references: [id])
   enrollments Enrollment[]
   coursework  Coursework[]
+  resources   CourseResource[]
 }
 
 model Enrollment {
@@ -90,4 +91,19 @@ model Submission {
   student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([courseworkId, studentId])
+}
+
+model CourseResource {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }

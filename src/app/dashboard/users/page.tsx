@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getCurrentUser } from "@/lib/auth-utils";
-import { getUsers, updateUser } from "@/actions/users";
+import { getUsers, updateUser, deleteUser } from "@/actions/users";
 
 export default async function UsersPage() {
   // Get current user with Prisma
@@ -80,51 +81,66 @@ export default async function UsersPage() {
 
   return (
     <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-              <p className="text-muted-foreground">
-                Manage all users in the system
-              </p>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+          <p className="text-muted-foreground">
+            Manage all users in the system
+          </p>
+        </div>
+      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>All Users</CardTitle>
-              <CardDescription>
-                {allUsers.length} user{allUsers.length !== 1 ? "s" : ""} found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allUsers.map((user: any) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        {user.full_name}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell className="capitalize">{user.role}</TableCell>
-                      <TableCell>
-                        {format(
-                          new Date(user.createdAt || user.created_at),
-                          "MMM d, yyyy"
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
+      <Card>
+        <CardHeader>
+          <CardTitle>All Users</CardTitle>
+          <CardDescription>
+            {allUsers.length} user{allUsers.length !== 1 ? "s" : ""} found
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {allUsers.map(
+                (user: {
+                  id: string;
+                  full_name: string;
+                  email: string;
+                  role: string;
+                  createdAt?: Date;
+                  created_at?: string;
+                }) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      {user.full_name}
+                    </TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="capitalize">{user.role}</TableCell>
+                    <TableCell>
+                      {format(
+                        new Date(
+                          user.createdAt || user.created_at || new Date()
+                        ),
+                        "MMM d, yyyy"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="hover:cursor-pointer"
+                            >
                               Edit Role
                             </Button>
                           </DialogTrigger>
@@ -162,18 +178,63 @@ export default async function UsersPage() {
                                 </Select>
                               </div>
                               <div className="flex justify-end">
-                                <Button type="submit">Save Changes</Button>
+                                <Button
+                                  type="submit"
+                                  className="hover:cursor-pointer"
+                                >
+                                  Save Changes
+                                </Button>
                               </div>
                             </form>
                           </DialogContent>
                         </Dialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="hover:cursor-pointer"
+                            >
+                              Remove
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Remove User</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to remove {user.full_name}
+                                ? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <form
+                              action={async () => {
+                                "use server";
+                                await deleteUser(user.id);
+                                return redirect("/dashboard/users");
+                              }}
+                              className="pt-4"
+                            >
+                              <DialogFooter>
+                                <DialogTrigger asChild>
+                                  <Button>Cancel</Button>
+                                </DialogTrigger>
+                                <Button type="submit" variant="destructive">
+                                  Remove User
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

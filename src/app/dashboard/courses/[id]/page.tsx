@@ -24,13 +24,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { CancelButton } from "@/components/cancel-button";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
 import {
   addCoursework,
   enrollStudent,
   unenrollStudent,
+  addCourseResource,
+  deleteCourseResource,
+  uploadCourseResource,
+  getCourseResources,
 } from "@/actions/courses";
 
 interface User {
@@ -65,6 +71,17 @@ interface Coursework {
   description: string | null;
   courseId: string;
   dueDate: Date | null;
+  createdAt: Date;
+}
+
+interface CourseResource {
+  id: string;
+  name: string;
+  description: string | null;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  courseId: string;
   createdAt: Date;
 }
 
@@ -147,6 +164,13 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   const courseContent = coursework || [];
 
+  // Fetch course resources with Prisma
+  const resourcesResult = await getCourseResources(courseId);
+  console.log("Resources result:", resourcesResult);
+  const courseResources = resourcesResult.success
+    ? resourcesResult.resources
+    : [];
+
   // Server actions wrapper functions
   const handleAddCoursework = async (formData: FormData) => {
     "use server";
@@ -196,6 +220,76 @@ export default async function CoursePage({ params }: CoursePageProps) {
     }
 
     redirect(`/dashboard/courses/${courseId}?tab=students`);
+  };
+
+  // Handle file upload for course resources
+  const handleResourceUpload = async (formData: FormData) => {
+    "use server";
+
+    const name = formData.get("name") as string;
+    const description = formData.get("description") as string;
+    const file = formData.get("file") as File;
+
+    if (!name || !file) {
+      console.error("Name and file are required");
+      return;
+    }
+
+    try {
+      // Upload the file directly using the server action
+      const uploadResult = await uploadCourseResource(file, courseId);
+
+      if (!uploadResult.success) {
+        console.error("Error uploading file:", uploadResult.error);
+        return;
+      }
+
+      // Make sure we have the data before destructuring
+      if (!uploadResult.data) {
+        console.error("No data returned from upload");
+        return;
+      }
+
+      const fileUrl = uploadResult.data.fileUrl;
+
+      // Add the resource to the database
+      const { error: resourceError } = await addCourseResource({
+        name,
+        description: description || undefined,
+        courseId,
+        fileUrl,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+
+      if (resourceError) {
+        console.error("Error adding resource:", resourceError);
+        return;
+      }
+
+      // Return a success response that will be used for redirection
+      return { success: true, redirectTo: `/dashboard/courses/${courseId}?tab=resources` };
+    } catch (error) {
+      // Only log actual errors, not redirect "errors"
+      if (!(error instanceof Error && error.message === 'NEXT_REDIRECT')) {
+        console.error("Error processing file upload:", error);
+      }
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+
+  // Handle resource deletion
+  const handleDeleteResource = async (resourceId: string) => {
+    "use server";
+
+    const { error } = await deleteCourseResource(resourceId);
+
+    if (error) {
+      console.error("Error deleting resource:", error);
+      return;
+    }
+
+    redirect(`/dashboard/courses/${courseId}?tab=resources`);
   };
 
   // Fetch available students for enrollment (not already enrolled)
@@ -285,6 +379,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
       <Tabs defaultValue="content">
         <TabsList>
           <TabsTrigger value="content">Course Content</TabsTrigger>
+          <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
         </TabsList>
 
@@ -529,6 +624,179 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 <div className="flex h-32 items-center justify-center">
                   <p className="text-center text-muted-foreground">
                     No students are enrolled in this course yet.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="resources" className="space-y-4">
+          {(user.role === "admin" ||
+            (user.role === "teacher" && course.teacherId === user.id)) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Course Resource</CardTitle>
+                <CardDescription>
+                  Upload files such as PDFs, images, or other materials for
+                  students
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form action={handleResourceUpload} className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="name" className="text-sm font-medium">
+                        Resource Name
+                      </label>
+                      <input
+                        id="name"
+                        name="name"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        placeholder="Lecture Notes Week 1"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="file" className="text-sm font-medium">
+                        File
+                      </label>
+                      <input
+                        id="file"
+                        name="file"
+                        type="file"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="description"
+                      className="text-sm font-medium"
+                    >
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2"
+                      rows={3}
+                      placeholder="Describe the resource..."
+                    ></textarea>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button type="submit">Upload Resource</Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Course Resources</CardTitle>
+              <CardDescription>
+                {courseResources?.length} resource
+                {courseResources?.length !== 1 ? "s" : ""} available
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {courseResources?.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Size</TableHead>
+                      <TableHead>Uploaded</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {courseResources?.map((resource: CourseResource) => (
+                      <TableRow key={resource.id}>
+                        <TableCell className="font-medium">
+                          {resource.name}
+                        </TableCell>
+                        <TableCell>
+                          {resource.description || "No description"}
+                        </TableCell>
+                        <TableCell>
+                          {resource.fileType.split("/")[1]?.toUpperCase() ||
+                            resource.fileType}
+                        </TableCell>
+                        <TableCell>
+                          {Math.round(resource.fileSize / 1024)} KB
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(resource.createdAt), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" asChild>
+                              <a
+                                href={resource.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                View
+                              </a>
+                            </Button>
+
+                            {(user.role === "admin" ||
+                              (user.role === "teacher" &&
+                                course.teacherId === user.id)) && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                  >
+                                    Delete
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Delete Resource</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to delete &ldquo;
+                                      {resource.name}&rdquo;? This action cannot
+                                      be undone.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <form
+                                    action={async () => {
+                                      "use server";
+                                      await handleDeleteResource(resource.id);
+                                    }}
+                                    className="pt-4"
+                                  >
+                                    <DialogFooter>
+                                      <CancelButton variant="outline" />
+                                      <Button
+                                        type="submit"
+                                        variant="destructive"
+                                      >
+                                        Delete Resource
+                                      </Button>
+                                    </DialogFooter>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="flex h-32 items-center justify-center">
+                  <p className="text-center text-muted-foreground">
+                    No resources have been added to this course yet.
                   </p>
                 </div>
               )}

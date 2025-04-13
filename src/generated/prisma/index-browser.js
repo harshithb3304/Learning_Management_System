@@ -167,6 +167,18 @@ exports.Prisma.SubmissionScalarFieldEnum = {
   studentId: 'studentId'
 };
 
+exports.Prisma.CourseResourceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  fileUrl: 'fileUrl',
+  fileType: 'fileType',
+  fileSize: 'fileSize',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  courseId: 'courseId'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -188,7 +200,8 @@ exports.Prisma.ModelName = {
   Course: 'Course',
   Enrollment: 'Enrollment',
   Coursework: 'Coursework',
-  Submission: 'Submission'
+  Submission: 'Submission',
+  CourseResource: 'CourseResource'
 };
 
 /**

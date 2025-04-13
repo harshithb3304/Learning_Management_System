@@ -1,7 +1,8 @@
-'use server'
+"use server";
 
-import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/utils/supabase/server";
 
 /**
  * Get all courses with optional filtering by teacher ID
@@ -14,16 +15,16 @@ export async function getCourses(teacherId?: string) {
         teacher: true,
         enrollments: {
           include: {
-            student: true
-          }
-        }
+            student: true,
+          },
+        },
       },
-      orderBy: { title: 'asc' }
-    })
-    return { courses }
+      orderBy: { title: "asc" },
+    });
+    return { courses };
   } catch (error) {
-    console.error('Error fetching courses:', error)
-    return { error: 'Failed to fetch courses' }
+    console.error("Error fetching courses:", error);
+    return { error: "Failed to fetch courses" };
   }
 }
 
@@ -38,29 +39,29 @@ export async function getCourseById(id: string) {
         teacher: true,
         enrollments: {
           include: {
-            student: true
-          }
+            student: true,
+          },
         },
         coursework: {
           include: {
             submissions: {
               include: {
-                student: true
-              }
-            }
-          }
-        }
-      }
-    })
-    
+                student: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
     if (!course) {
-      return { error: 'Course not found' }
+      return { error: "Course not found" };
     }
-    
-    return { course }
+
+    return { course };
   } catch (error) {
-    console.error('Error fetching course:', error)
-    return { error: 'Failed to fetch course' }
+    console.error("Error fetching course:", error);
+    return { error: "Failed to fetch course" };
   }
 }
 
@@ -68,45 +69,48 @@ export async function getCourseById(id: string) {
  * Create a new course
  */
 export async function createCourse(data: {
-  title: string
-  description?: string
-  imageUrl?: string
-  teacherId: string
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  teacherId: string;
 }) {
   try {
     const course = await prisma.course.create({
-      data
-    })
-    
-    revalidatePath('/dashboard/courses')
-    return { course }
+      data,
+    });
+
+    revalidatePath("/dashboard/courses");
+    return { course };
   } catch (error) {
-    console.error('Error creating course:', error)
-    return { error: 'Failed to create course' }
+    console.error("Error creating course:", error);
+    return { error: "Failed to create course" };
   }
 }
 
 /**
  * Update an existing course
  */
-export async function updateCourse(id: string, data: {
-  title?: string
-  description?: string
-  imageUrl?: string
-  teacherId?: string
-}) {
+export async function updateCourse(
+  id: string,
+  data: {
+    title?: string;
+    description?: string;
+    imageUrl?: string;
+    teacherId?: string;
+  }
+) {
   try {
     const course = await prisma.course.update({
       where: { id },
-      data
-    })
-    
-    revalidatePath('/dashboard/courses')
-    revalidatePath(`/dashboard/courses/${id}`)
-    return { course }
+      data,
+    });
+
+    revalidatePath("/dashboard/courses");
+    revalidatePath(`/dashboard/courses/${id}`);
+    return { course };
   } catch (error) {
-    console.error('Error updating course:', error)
-    return { error: 'Failed to update course' }
+    console.error("Error updating course:", error);
+    return { error: "Failed to update course" };
   }
 }
 
@@ -116,18 +120,16 @@ export async function updateCourse(id: string, data: {
 export async function deleteCourse(id: string) {
   try {
     await prisma.course.delete({
-      where: { id }
-    })
-    
-    revalidatePath('/dashboard/courses')
-    return { success: true }
+      where: { id },
+    });
+
+    revalidatePath("/dashboard/courses");
+    return { success: true };
   } catch (error) {
-    console.error('Error deleting course:', error)
-    return { error: 'Failed to delete course' }
+    console.error("Error deleting course:", error);
+    return { error: "Failed to delete course" };
   }
 }
-
-
 
 /**
  * Remove a student from a course
@@ -136,19 +138,19 @@ export async function unenrollStudent(enrollmentId: string) {
   try {
     const enrollment = await prisma.enrollment.delete({
       where: {
-        id: enrollmentId
+        id: enrollmentId,
       },
       include: {
-        course: true
-      }
-    })
-    
-    revalidatePath('/dashboard/courses')
-    revalidatePath(`/dashboard/courses/${enrollment.courseId}`)
-    return { success: true }
+        course: true,
+      },
+    });
+
+    revalidatePath("/dashboard/courses");
+    revalidatePath(`/dashboard/courses/${enrollment.courseId}`);
+    return { success: true };
   } catch (error) {
-    console.error('Error unenrolling student:', error)
-    return { error: 'Failed to unenroll student' }
+    console.error("Error unenrolling student:", error);
+    return { error: "Failed to unenroll student" };
   }
 }
 
@@ -156,10 +158,10 @@ export async function unenrollStudent(enrollmentId: string) {
  * Add coursework to a course
  */
 export async function addCoursework(data: {
-  title: string
-  description?: string
-  courseId: string
-  dueDate?: string
+  title: string;
+  description?: string;
+  courseId: string;
+  dueDate?: string;
 }) {
   try {
     const coursework = await prisma.coursework.create({
@@ -167,15 +169,15 @@ export async function addCoursework(data: {
         title: data.title,
         description: data.description,
         courseId: data.courseId,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined
-      }
-    })
-    
-    revalidatePath(`/dashboard/courses/${data.courseId}`)
-    return { coursework }
+        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+      },
+    });
+
+    revalidatePath(`/dashboard/courses/${data.courseId}`);
+    return { coursework };
   } catch (error) {
-    console.error('Error adding coursework:', error)
-    return { error: 'Failed to add coursework' }
+    console.error("Error adding coursework:", error);
+    return { error: "Failed to add coursework" };
   }
 }
 
@@ -183,8 +185,8 @@ export async function addCoursework(data: {
  * Enroll a student in a course
  */
 export async function enrollStudent(data: {
-  courseId: string
-  studentId: string
+  courseId: string;
+  studentId: string;
 }) {
   try {
     // Check if student is already enrolled
@@ -192,31 +194,193 @@ export async function enrollStudent(data: {
       where: {
         courseId_studentId: {
           courseId: data.courseId,
-          studentId: data.studentId
-        }
-      }
-    })
-    
+          studentId: data.studentId,
+        },
+      },
+    });
+
     if (existingEnrollment) {
-      return { error: 'Student is already enrolled in this course' }
+      return { error: "Student is already enrolled in this course" };
     }
-    
+
     const enrollment = await prisma.enrollment.create({
       data: {
         courseId: data.courseId,
-        studentId: data.studentId
+        studentId: data.studentId,
       },
       include: {
         course: true,
-        student: true
-      }
-    })
-    
-    revalidatePath('/dashboard/courses')
-    revalidatePath(`/dashboard/courses/${data.courseId}`)
-    return { enrollment }
+        student: true,
+      },
+    });
+
+    revalidatePath("/dashboard/courses");
+    revalidatePath(`/dashboard/courses/${data.courseId}`);
+    return { enrollment };
   } catch (error) {
-    console.error('Error enrolling student:', error)
-    return { error: 'Failed to enroll student' }
+    console.error("Error enrolling student:", error);
+    return { error: "Failed to enroll student" };
+  }
+}
+
+/**
+ * Upload a file to course resources bucket using standard upload
+ */
+export async function uploadCourseResource(file: File, courseId: string) {
+  try {
+    const supabase = await createClient();
+
+    // Create a unique file path to avoid conflicts
+    const fileName = `${courseId}/${Date.now()}-${file.name.replace(
+      /\s+/g,
+      "-"
+    )}`;
+
+    // Upload file using standard upload method as shown in the docs
+    const { error } = await supabase.storage
+      .from("course-resources")
+      .upload(fileName, file, {
+        contentType: file.type,
+        cacheControl: "3600",
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    // Get the public URL for the file
+    const { data: publicUrlData } = supabase.storage
+      .from("course-resources")
+      .getPublicUrl(fileName);
+
+    return {
+      success: true,
+      data: {
+        fileUrl: publicUrlData.publicUrl,
+      },
+    };
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Add a resource to a course
+ */
+export async function addCourseResource(data: {
+  name: string;
+  description?: string;
+  courseId: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+}) {
+  try {
+    const resource = await prisma.courseResource.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        courseId: data.courseId,
+        fileUrl: data.fileUrl,
+        fileType: data.fileType,
+        fileSize: data.fileSize,
+      },
+    });
+
+    revalidatePath(`/dashboard/courses/${data.courseId}`);
+    return { success: true, resource };
+  } catch (error) {
+    console.error("Error adding course resource:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to add course resource",
+    };
+  }
+}
+
+/**
+ * Get all resources for a course
+ */
+export async function getCourseResources(courseId: string) {
+  try {
+    const resources = await prisma.courseResource.findMany({
+      where: { courseId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      success: true,
+      resources: resources || [], // Ensure we always return an array
+    };
+  } catch (error) {
+    console.error("Error fetching course resources:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch course resources",
+      resources: [], // Return empty array on error
+    };
+  }
+}
+
+/**
+ * Delete a course resource
+ */
+export async function deleteCourseResource(id: string) {
+  try {
+    // First get the resource to get the file path
+    const resource = await prisma.courseResource.findUnique({
+      where: { id },
+    });
+
+    if (!resource) {
+      return { success: false, error: "Resource not found" };
+    }
+
+    // Delete from database
+    await prisma.courseResource.delete({
+      where: { id },
+    });
+
+    // Get the Supabase client
+    const supabase = await createClient();
+
+    // Extract the file path from the URL
+    const fileUrl = resource.fileUrl;
+    const urlParts = fileUrl.split("course-resources/");
+
+    if (urlParts.length > 1) {
+      const filePath = urlParts[1].split("?")[0]; // Remove query parameters if any
+
+      // Delete the file from Supabase storage
+      const { error: deleteError } = await supabase.storage
+        .from("course-resources")
+        .remove([filePath]);
+
+      if (deleteError) {
+        console.error("Error deleting file from storage:", deleteError);
+      }
+    }
+
+    revalidatePath(`/dashboard/courses/${resource.courseId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting course resource:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to delete course resource",
+    };
   }
 }

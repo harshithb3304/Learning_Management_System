@@ -33,7 +33,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground h-full`}
       >
         <SidebarProvider>
-          <div className="flex h-full">
+          <div className="flex h-full w-full">
             <AppSidebar role={user.role as "admin" | "teacher" | "student"} />
 
             <div className="flex h-screen w-full overflow-hidden">
@@ -41,9 +41,7 @@ export default async function RootLayout({
                 <div className="flex justify-between items-center mb-4">
                   <SidebarTrigger />
                 </div>
-                <div className="mx-auto max-w-6xl">
-                  {children}
-                </div>
+                <div className="container mx-auto max-w-6xl">{children}</div>
               </main>
             </div>
           </div>
