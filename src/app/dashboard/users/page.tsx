@@ -23,7 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,7 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getCurrentUser } from "@/lib/auth-utils";
-import { getUsers, updateUser, deleteUser } from "@/actions/users";
+import { getUsers, updateUser } from "@/actions/users";
+import { DeleteUserDialog } from "@/components/delete-user-dialog";
 
 export default async function UsersPage() {
   // Get current user with Prisma
@@ -136,11 +136,7 @@ export default async function UsersPage() {
                       <div className="flex justify-end gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="hover:cursor-pointer"
-                            >
+                            <Button variant="default" size="sm">
                               Edit Role
                             </Button>
                           </DialogTrigger>
@@ -178,54 +174,16 @@ export default async function UsersPage() {
                                 </Select>
                               </div>
                               <div className="flex justify-end">
-                                <Button
-                                  type="submit"
-                                  className="hover:cursor-pointer"
-                                >
-                                  Save Changes
-                                </Button>
+                                <Button type="submit">Save Changes</Button>
                               </div>
                             </form>
                           </DialogContent>
                         </Dialog>
 
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="hover:cursor-pointer"
-                            >
-                              Remove
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Remove User</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to remove {user.full_name}
-                                ? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <form
-                              action={async () => {
-                                "use server";
-                                await deleteUser(user.id);
-                                return redirect("/dashboard/users");
-                              }}
-                              className="pt-4"
-                            >
-                              <DialogFooter>
-                                <DialogTrigger asChild>
-                                  <Button>Cancel</Button>
-                                </DialogTrigger>
-                                <Button type="submit" variant="destructive">
-                                  Remove User
-                                </Button>
-                              </DialogFooter>
-                            </form>
-                          </DialogContent>
-                        </Dialog>
+                        <DeleteUserDialog
+                          userId={user.id}
+                          userName={user.full_name}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

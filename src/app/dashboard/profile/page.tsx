@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
+import { ProfileAvatarUpload } from "@/components/profile-avatar-upload";
 
 export default async function ProfilePage() {
   // Get current user with Prisma
@@ -110,16 +111,13 @@ export default async function ProfilePage() {
             <CardTitle>Your Avatar</CardTitle>
             <CardDescription>Your profile picture</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center space-y-4">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={user.avatar_url || ""} alt={user.full_name} />
-              <AvatarFallback className="text-2xl">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
-            <p className="text-center text-sm text-muted-foreground">
-              Your avatar is managed through your Google account
-            </p>
+          <CardContent>
+            <ProfileAvatarUpload
+              userId={user.id}
+              currentAvatarUrl={user.avatar_url}
+              userFullName={user.full_name}
+              userInitials={userInitials}
+            />
           </CardContent>
         </Card>
       </div>

@@ -80,8 +80,8 @@ const roleBasedItems = {
       icon: LayoutDashboard,
     },
     {
-      title: "My Courses",
-      url: "/dashboard/my-courses",
+      title: "Your Courses",
+      url: "/dashboard/courses",
       icon: GraduationCap,
     },
     {

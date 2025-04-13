@@ -40,8 +40,8 @@ model Course {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  teacherId   String
-  teacher     User             @relation("TeacherCourses", fields: [teacherId], references: [id])
+  teacherId   String?
+  teacher     User?            @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: SetNull)
   enrollments Enrollment[]
   coursework  Coursework[]
   resources   CourseResource[]

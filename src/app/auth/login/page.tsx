@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth-utils";
+import Link from "next/link";
 
 export default async function LoginPage() {
   // Check if user is already logged in
@@ -122,77 +122,95 @@ export default async function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Welcome to LMS</CardTitle>
-          <CardDescription>
-            Sign in to access your learning dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Google Login */}
-          <div>
-            <form action={signInWithGoogle} className="space-y-4">
-              <Button type="submit" className="w-full">
-                Sign in with Google
-              </Button>
-            </form>
-          </div>
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+    <div className="min-h-screen flex flex-col">
+      <header className="w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-16 items-center px-4 sm:px-6 w-full max-w-screen-xl mx-auto">
+          <Link
+            href="/"
+            className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
+              LMS
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or sign in with email
-              </span>
+            <span className="text-xl font-bold hidden sm:inline-block">
+              EduLearn
+            </span>
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Welcome to LMS</CardTitle>
+            <CardDescription>
+              Sign in to access your learning dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Google Login */}
+            <div>
+              <form action={signInWithGoogle} className="space-y-4">
+                <Button type="submit" className="w-full">
+                  Sign in with Google
+                </Button>
+              </form>
             </div>
-          </div>
-          
-          {/* Email Login */}
-          <div>
-            <form action={signInWithEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="admin@lms.com"
-                  required
-                />
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="Enter password"
-                  required
-                />
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or sign in with email
+                </span>
               </div>
-              <Button type="submit" className="w-full">
-                Sign in with Email
-              </Button>
-            </form>
-          </div>
-          
-          <div className="mt-4 text-xs text-muted-foreground">
-            <p className="font-semibold mb-1">Test accounts:</p>
-            <p>- Admin: admin@lms.com</p>
-            <p>- Teacher: teacher@lms.com</p>
-            <p>- Student: student1@lms.com</p>
-            <p>Password for all test accounts: password123</p>
-            <p className="font-bold mt-2">
-              The Email Login Feature is only for test users. Please use
-              Google Auth for regular use.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+
+            {/* Email Login */}
+            <div>
+              <form action={signInWithEmail} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="admin@lms.com"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Sign in with Email
+                </Button>
+              </form>
+            </div>
+
+            <div className="mt-4 text-xs text-muted-foreground">
+              <p className="font-semibold mb-1">Test accounts:</p>
+              <p>- Admin: admin@lms.com</p>
+              <p>- Teacher: teacher@lms.com</p>
+              <p>- Student: student1@lms.com</p>
+              <p>Password for all test accounts: password123</p>
+              <p className="font-bold mt-2">
+                The Email Login Feature is only for test users. Please use
+                Google Auth for regular use.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }

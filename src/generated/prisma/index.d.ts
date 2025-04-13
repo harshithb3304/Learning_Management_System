@@ -2756,7 +2756,7 @@ export namespace Prisma {
     imageUrl: string | null
     createdAt: Date
     updatedAt: Date
-    teacherId: string
+    teacherId: string | null
     _count: CourseCountAggregateOutputType | null
     _min: CourseMinAggregateOutputType | null
     _max: CourseMaxAggregateOutputType | null
@@ -2784,7 +2784,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     teacherId?: boolean
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
     enrollments?: boolean | Course$enrollmentsArgs<ExtArgs>
     coursework?: boolean | Course$courseworkArgs<ExtArgs>
     resources?: boolean | Course$resourcesArgs<ExtArgs>
@@ -2799,7 +2799,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     teacherId?: boolean
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
   }, ExtArgs["result"]["course"]>
 
   export type CourseSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -2810,7 +2810,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     teacherId?: boolean
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
   }, ExtArgs["result"]["course"]>
 
   export type CourseSelectScalar = {
@@ -2825,23 +2825,23 @@ export namespace Prisma {
 
   export type CourseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "description" | "imageUrl" | "createdAt" | "updatedAt" | "teacherId", ExtArgs["result"]["course"]>
   export type CourseInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
     enrollments?: boolean | Course$enrollmentsArgs<ExtArgs>
     coursework?: boolean | Course$courseworkArgs<ExtArgs>
     resources?: boolean | Course$resourcesArgs<ExtArgs>
     _count?: boolean | CourseCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type CourseIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
   }
   export type CourseIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    teacher?: boolean | UserDefaultArgs<ExtArgs>
+    teacher?: boolean | Course$teacherArgs<ExtArgs>
   }
 
   export type $CoursePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Course"
     objects: {
-      teacher: Prisma.$UserPayload<ExtArgs>
+      teacher: Prisma.$UserPayload<ExtArgs> | null
       enrollments: Prisma.$EnrollmentPayload<ExtArgs>[]
       coursework: Prisma.$CourseworkPayload<ExtArgs>[]
       resources: Prisma.$CourseResourcePayload<ExtArgs>[]
@@ -2853,7 +2853,7 @@ export namespace Prisma {
       imageUrl: string | null
       createdAt: Date
       updatedAt: Date
-      teacherId: string
+      teacherId: string | null
     }, ExtArgs["result"]["course"]>
     composites: {}
   }
@@ -3248,7 +3248,7 @@ export namespace Prisma {
    */
   export interface Prisma__CourseClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    teacher<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    teacher<T extends Course$teacherArgs<ExtArgs> = {}>(args?: Subset<T, Course$teacherArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     enrollments<T extends Course$enrollmentsArgs<ExtArgs> = {}>(args?: Subset<T, Course$enrollmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$EnrollmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     coursework<T extends Course$courseworkArgs<ExtArgs> = {}>(args?: Subset<T, Course$courseworkArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CourseworkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     resources<T extends Course$resourcesArgs<ExtArgs> = {}>(args?: Subset<T, Course$resourcesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CourseResourcePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3681,6 +3681,25 @@ export namespace Prisma {
      * Limit how many Courses to delete.
      */
     limit?: number
+  }
+
+  /**
+   * Course.teacher
+   */
+  export type Course$teacherArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the User
+     */
+    select?: UserSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the User
+     */
+    omit?: UserOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserInclude<ExtArgs> | null
+    where?: UserWhereInput
   }
 
   /**
@@ -8513,8 +8532,8 @@ export namespace Prisma {
     imageUrl?: StringNullableFilter<"Course"> | string | null
     createdAt?: DateTimeFilter<"Course"> | Date | string
     updatedAt?: DateTimeFilter<"Course"> | Date | string
-    teacherId?: StringFilter<"Course"> | string
-    teacher?: XOR<UserScalarRelationFilter, UserWhereInput>
+    teacherId?: StringNullableFilter<"Course"> | string | null
+    teacher?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     enrollments?: EnrollmentListRelationFilter
     coursework?: CourseworkListRelationFilter
     resources?: CourseResourceListRelationFilter
@@ -8527,7 +8546,7 @@ export namespace Prisma {
     imageUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    teacherId?: SortOrder
+    teacherId?: SortOrderInput | SortOrder
     teacher?: UserOrderByWithRelationInput
     enrollments?: EnrollmentOrderByRelationAggregateInput
     coursework?: CourseworkOrderByRelationAggregateInput
@@ -8544,8 +8563,8 @@ export namespace Prisma {
     imageUrl?: StringNullableFilter<"Course"> | string | null
     createdAt?: DateTimeFilter<"Course"> | Date | string
     updatedAt?: DateTimeFilter<"Course"> | Date | string
-    teacherId?: StringFilter<"Course"> | string
-    teacher?: XOR<UserScalarRelationFilter, UserWhereInput>
+    teacherId?: StringNullableFilter<"Course"> | string | null
+    teacher?: XOR<UserNullableScalarRelationFilter, UserWhereInput> | null
     enrollments?: EnrollmentListRelationFilter
     coursework?: CourseworkListRelationFilter
     resources?: CourseResourceListRelationFilter
@@ -8558,7 +8577,7 @@ export namespace Prisma {
     imageUrl?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    teacherId?: SortOrder
+    teacherId?: SortOrderInput | SortOrder
     _count?: CourseCountOrderByAggregateInput
     _max?: CourseMaxOrderByAggregateInput
     _min?: CourseMinOrderByAggregateInput
@@ -8574,7 +8593,7 @@ export namespace Prisma {
     imageUrl?: StringNullableWithAggregatesFilter<"Course"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Course"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Course"> | Date | string
-    teacherId?: StringWithAggregatesFilter<"Course"> | string
+    teacherId?: StringNullableWithAggregatesFilter<"Course"> | string | null
   }
 
   export type EnrollmentWhereInput = {
@@ -8951,7 +8970,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacher: UserCreateNestedOneWithoutTeacherCoursesInput
+    teacher?: UserCreateNestedOneWithoutTeacherCoursesInput
     enrollments?: EnrollmentCreateNestedManyWithoutCourseInput
     coursework?: CourseworkCreateNestedManyWithoutCourseInput
     resources?: CourseResourceCreateNestedManyWithoutCourseInput
@@ -8964,7 +8983,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacherId: string
+    teacherId?: string | null
     enrollments?: EnrollmentUncheckedCreateNestedManyWithoutCourseInput
     coursework?: CourseworkUncheckedCreateNestedManyWithoutCourseInput
     resources?: CourseResourceUncheckedCreateNestedManyWithoutCourseInput
@@ -8977,7 +8996,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacher?: UserUpdateOneRequiredWithoutTeacherCoursesNestedInput
+    teacher?: UserUpdateOneWithoutTeacherCoursesNestedInput
     enrollments?: EnrollmentUpdateManyWithoutCourseNestedInput
     coursework?: CourseworkUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUpdateManyWithoutCourseNestedInput
@@ -8990,7 +9009,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacherId?: StringFieldUpdateOperationsInput | string
+    teacherId?: NullableStringFieldUpdateOperationsInput | string | null
     enrollments?: EnrollmentUncheckedUpdateManyWithoutCourseNestedInput
     coursework?: CourseworkUncheckedUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUncheckedUpdateManyWithoutCourseNestedInput
@@ -9003,7 +9022,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacherId: string
+    teacherId?: string | null
   }
 
   export type CourseUpdateManyMutationInput = {
@@ -9022,7 +9041,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacherId?: StringFieldUpdateOperationsInput | string
+    teacherId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type EnrollmentCreateInput = {
@@ -9473,9 +9492,9 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
-  export type UserScalarRelationFilter = {
-    is?: UserWhereInput
-    isNot?: UserWhereInput
+  export type UserNullableScalarRelationFilter = {
+    is?: UserWhereInput | null
+    isNot?: UserWhereInput | null
   }
 
   export type CourseworkListRelationFilter = {
@@ -9531,6 +9550,11 @@ export namespace Prisma {
   export type CourseScalarRelationFilter = {
     is?: CourseWhereInput
     isNot?: CourseWhereInput
+  }
+
+  export type UserScalarRelationFilter = {
+    is?: UserWhereInput
+    isNot?: UserWhereInput
   }
 
   export type EnrollmentCourseIdStudentIdCompoundUniqueInput = {
@@ -9955,10 +9979,12 @@ export namespace Prisma {
     connect?: CourseResourceWhereUniqueInput | CourseResourceWhereUniqueInput[]
   }
 
-  export type UserUpdateOneRequiredWithoutTeacherCoursesNestedInput = {
+  export type UserUpdateOneWithoutTeacherCoursesNestedInput = {
     create?: XOR<UserCreateWithoutTeacherCoursesInput, UserUncheckedCreateWithoutTeacherCoursesInput>
     connectOrCreate?: UserCreateOrConnectWithoutTeacherCoursesInput
     upsert?: UserUpsertWithoutTeacherCoursesInput
+    disconnect?: UserWhereInput | boolean
+    delete?: UserWhereInput | boolean
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutTeacherCoursesInput, UserUpdateWithoutTeacherCoursesInput>, UserUncheckedUpdateWithoutTeacherCoursesInput>
   }
@@ -10497,7 +10523,7 @@ export namespace Prisma {
     imageUrl?: StringNullableFilter<"Course"> | string | null
     createdAt?: DateTimeFilter<"Course"> | Date | string
     updatedAt?: DateTimeFilter<"Course"> | Date | string
-    teacherId?: StringFilter<"Course"> | string
+    teacherId?: StringNullableFilter<"Course"> | string | null
   }
 
   export type EnrollmentUpsertWithWhereUniqueWithoutStudentInput = {
@@ -10791,7 +10817,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacher: UserCreateNestedOneWithoutTeacherCoursesInput
+    teacher?: UserCreateNestedOneWithoutTeacherCoursesInput
     coursework?: CourseworkCreateNestedManyWithoutCourseInput
     resources?: CourseResourceCreateNestedManyWithoutCourseInput
   }
@@ -10803,7 +10829,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacherId: string
+    teacherId?: string | null
     coursework?: CourseworkUncheckedCreateNestedManyWithoutCourseInput
     resources?: CourseResourceUncheckedCreateNestedManyWithoutCourseInput
   }
@@ -10860,7 +10886,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacher?: UserUpdateOneRequiredWithoutTeacherCoursesNestedInput
+    teacher?: UserUpdateOneWithoutTeacherCoursesNestedInput
     coursework?: CourseworkUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUpdateManyWithoutCourseNestedInput
   }
@@ -10872,7 +10898,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacherId?: StringFieldUpdateOperationsInput | string
+    teacherId?: NullableStringFieldUpdateOperationsInput | string | null
     coursework?: CourseworkUncheckedUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUncheckedUpdateManyWithoutCourseNestedInput
   }
@@ -10919,7 +10945,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacher: UserCreateNestedOneWithoutTeacherCoursesInput
+    teacher?: UserCreateNestedOneWithoutTeacherCoursesInput
     enrollments?: EnrollmentCreateNestedManyWithoutCourseInput
     resources?: CourseResourceCreateNestedManyWithoutCourseInput
   }
@@ -10931,7 +10957,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacherId: string
+    teacherId?: string | null
     enrollments?: EnrollmentUncheckedCreateNestedManyWithoutCourseInput
     resources?: CourseResourceUncheckedCreateNestedManyWithoutCourseInput
   }
@@ -10991,7 +11017,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacher?: UserUpdateOneRequiredWithoutTeacherCoursesNestedInput
+    teacher?: UserUpdateOneWithoutTeacherCoursesNestedInput
     enrollments?: EnrollmentUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUpdateManyWithoutCourseNestedInput
   }
@@ -11003,7 +11029,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacherId?: StringFieldUpdateOperationsInput | string
+    teacherId?: NullableStringFieldUpdateOperationsInput | string | null
     enrollments?: EnrollmentUncheckedUpdateManyWithoutCourseNestedInput
     resources?: CourseResourceUncheckedUpdateManyWithoutCourseNestedInput
   }
@@ -11151,7 +11177,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacher: UserCreateNestedOneWithoutTeacherCoursesInput
+    teacher?: UserCreateNestedOneWithoutTeacherCoursesInput
     enrollments?: EnrollmentCreateNestedManyWithoutCourseInput
     coursework?: CourseworkCreateNestedManyWithoutCourseInput
   }
@@ -11163,7 +11189,7 @@ export namespace Prisma {
     imageUrl?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    teacherId: string
+    teacherId?: string | null
     enrollments?: EnrollmentUncheckedCreateNestedManyWithoutCourseInput
     coursework?: CourseworkUncheckedCreateNestedManyWithoutCourseInput
   }
@@ -11191,7 +11217,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacher?: UserUpdateOneRequiredWithoutTeacherCoursesNestedInput
+    teacher?: UserUpdateOneWithoutTeacherCoursesNestedInput
     enrollments?: EnrollmentUpdateManyWithoutCourseNestedInput
     coursework?: CourseworkUpdateManyWithoutCourseNestedInput
   }
@@ -11203,7 +11229,7 @@ export namespace Prisma {
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    teacherId?: StringFieldUpdateOperationsInput | string
+    teacherId?: NullableStringFieldUpdateOperationsInput | string | null
     enrollments?: EnrollmentUncheckedUpdateManyWithoutCourseNestedInput
     coursework?: CourseworkUncheckedUpdateManyWithoutCourseNestedInput
   }

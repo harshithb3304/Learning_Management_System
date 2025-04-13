@@ -104,16 +104,65 @@ export async function updateUser(id: string, data: {
 /**
  * Delete a user
  */
+/**
+ * Get all teachers for course assignment
+ */
+export async function getTeachers() {
+  try {
+    const teachers = await prisma.user.findMany({
+      where: { role: 'teacher' },
+      orderBy: { full_name: 'asc' },
+      select: {
+        id: true,
+        full_name: true,
+        email: true
+      }
+    });
+    
+    return { teachers };
+  } catch (error) {
+    console.error('Error fetching teachers:', error);
+    return { error: 'Failed to fetch teachers' };
+  }
+}
+
 export async function deleteUser(id: string) {
   try {
+    // First check if user is a teacher with courses
+    const userToDelete = await prisma.user.findUnique({
+      where: { id },
+      include: { teacherCourses: true }
+    });
+
+    if (!userToDelete) {
+      return { error: 'User not found' };
+    }
+
+    // If user is a teacher with courses, we need to handle the courses
+    if (userToDelete.role === 'teacher' && userToDelete.teacherCourses.length > 0) {
+      // Find an admin to transfer courses to
+      const admin = await prisma.user.findFirst({
+        where: { role: 'admin' }
+      });
+
+      if (admin) {
+        // Transfer all courses to the admin
+        await prisma.course.updateMany({
+          where: { teacherId: id },
+          data: { teacherId: admin.id }
+        });
+      }
+    }
+
+    // Now we can safely delete the user
     await prisma.user.delete({
       where: { id }
-    })
+    });
     
-    revalidatePath('/dashboard/users')
-    return { success: true }
+    revalidatePath('/dashboard/users');
+    return { success: true };
   } catch (error) {
-    console.error('Error deleting user:', error)
-    return { error: 'Failed to delete user' }
+    console.error('Error deleting user:', error);
+    return { error: 'Error deleting user: ' + (error instanceof Error ? error.message : String(error)) };
   }
 }

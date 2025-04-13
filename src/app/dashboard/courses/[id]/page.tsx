@@ -30,14 +30,16 @@ import { CancelButton } from "@/components/cancel-button";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
 import {
-  addCoursework,
-  enrollStudent,
   unenrollStudent,
   addCourseResource,
   deleteCourseResource,
   uploadCourseResource,
   getCourseResources,
 } from "@/actions/courses";
+import { getTeachers } from "@/actions/users";
+import { ChangeTeacherDialog } from "@/components/change-teacher-dialog";
+import { AddCourseworkForm } from "@/components/add-coursework-form";
+import { EnrollStudentsForm } from "@/components/enroll-students-form";
 import Link from "next/link";
 
 interface User {
@@ -53,7 +55,7 @@ interface Course {
   id: string;
   title: string;
   description: string | null;
-  teacherId: string;
+  teacherId: string | null;
   createdAt: Date;
   teacher: User | null;
 }
@@ -118,7 +120,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const course: Course = courseData;
 
   // Check if user has permission to view this course
-  if (user.role === "teacher" && course.teacherId !== user.id) {
+  if (user.role === "teacher" && course.teacherId && course.teacherId !== user.id) {
     redirect("/dashboard/courses");
   }
 
@@ -168,57 +170,26 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const courseResources = resourcesResult.success
     ? resourcesResult.resources
     : [];
-
-  // Server actions wrapper functions
-  const handleAddCoursework = async (formData: FormData) => {
-    "use server";
-
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const dueDate = formData.get("due_date") as string;
-
-    if (!title) {
-      console.error("Title is required");
-      return;
+    
+  // Fetch all teachers for admin to change course teacher
+  interface TeacherType {
+    id: string;
+    full_name: string;
+    email: string;
+  }
+  
+  let availableTeachers: TeacherType[] = [];
+  if (user.role === "admin") {
+    const { teachers, error: teachersError } = await getTeachers();
+    if (teachersError) {
+      console.error("Error fetching teachers:", teachersError);
+    } else {
+      availableTeachers = teachers || [];
     }
+  }
 
-    const { error } = await addCoursework({
-      title,
-      description,
-      courseId: courseId,
-      dueDate: dueDate || undefined,
-    });
-
-    if (error) {
-      console.error("Error adding coursework:", error);
-      return;
-    }
-
-    redirect(`/dashboard/courses/${courseId}?tab=content`);
-  };
-
-  const handleEnrollStudent = async (formData: FormData) => {
-    "use server";
-
-    const studentId = formData.get("student_id") as string;
-
-    if (!studentId) {
-      console.error("Student ID is required");
-      return;
-    }
-
-    const { error } = await enrollStudent({
-      courseId: courseId,
-      studentId,
-    });
-
-    if (error) {
-      console.error("Error enrolling student:", error);
-      return;
-    }
-
-    redirect(`/dashboard/courses/${courseId}?tab=students`);
-  };
+  // Server actions for resource handling and unenrollment remain server-side
+  // Client-side components will handle coursework and enrollment
 
   // Handle file upload for course resources
   const handleResourceUpload = async (formData: FormData) => {
@@ -342,7 +313,16 @@ export default async function CoursePage({ params }: CoursePageProps) {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <p className="text-sm font-medium">Teacher</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Teacher</p>
+                {user.role === "admin" && (
+                  <ChangeTeacherDialog
+                    courseId={courseId}
+                    currentTeacherId={course.teacherId || ""}
+                    teachers={availableTeachers}
+                  />
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">
                 {course.teacher?.full_name || "Unknown"}
               </p>
@@ -388,51 +368,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={handleAddCoursework} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <label htmlFor="title" className="text-sm font-medium">
-                        Title
-                      </label>
-                      <input
-                        id="title"
-                        name="title"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                        placeholder="Lesson 1: Introduction"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="due_date" className="text-sm font-medium">
-                        Due Date (Optional)
-                      </label>
-                      <input
-                        id="due_date"
-                        name="due_date"
-                        type="date"
-                        className="w-full rounded-md border border-input bg-background px-3 py-2"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="description"
-                      className="text-sm font-medium"
-                    >
-                      Description
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      className="w-full rounded-md border border-input bg-background px-3 py-2"
-                      rows={3}
-                      placeholder="Describe the content or assignment..."
-                    ></textarea>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button type="submit">Add Content</Button>
-                  </div>
-                </form>
+                <AddCourseworkForm courseId={courseId} />
               </CardContent>
             </Card>
           )}
@@ -511,41 +447,12 @@ export default async function CoursePage({ params }: CoursePageProps) {
                           Select a student to enroll in this course
                         </DialogDescription>
                       </DialogHeader>
-                      <form
-                        action={handleEnrollStudent}
-                        className="space-y-4 pt-4"
-                      >
-                        <div className="space-y-2">
-                          <label
-                            htmlFor="student_id"
-                            className="text-sm font-medium"
-                          >
-                            Student
-                          </label>
-                          <select
-                            id="student_id"
-                            name="student_id"
-                            className="w-full rounded-md border border-input bg-background px-3 py-2"
-                            required
-                          >
-                            <option value="">Select a student</option>
-                            {availableStudents.map(
-                              (student: {
-                                id: string;
-                                full_name: string;
-                                email: string;
-                              }) => (
-                                <option key={student.id} value={student.id}>
-                                  {student.full_name} ({student.email})
-                                </option>
-                              )
-                            )}
-                          </select>
-                        </div>
-                        <div className="flex justify-end">
-                          <Button type="submit">Enroll</Button>
-                        </div>
-                      </form>
+                      <div className="pt-4">
+                        <EnrollStudentsForm 
+                          courseId={courseId} 
+                          availableStudents={availableStudents} 
+                        />
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
