@@ -8,24 +8,43 @@ import { prisma } from '@/lib/prisma'
  */
 export async function syncUserWithDatabase(userId: string, email: string, fullName: string, avatarUrl?: string) {
   try {
-    // Check if user already exists in Prisma DB
-    const existingUser = await prisma.user.findUnique({
+    // Check if user already exists in Prisma DB by ID
+    const existingUserById = await prisma.user.findUnique({
       where: { id: userId }
     })
 
-    if (!existingUser) {
-      // Create new user in Prisma DB
-      // Default role is 'student' - can be changed by admin later
-      await prisma.user.create({
-        data: {
-          id: userId,
-          email,
-          full_name: fullName,
-          role: 'student',
-          avatar_url: avatarUrl
-        }
-      })
-      console.log(`Created new user in database: ${email}`)
+    // Also check if user exists by email
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!existingUserById) {
+      if (existingUserByEmail) {
+        // If a user with this email already exists but with a different ID,
+        // update that user with the new auth ID
+        await prisma.user.update({
+          where: { email },
+          data: {
+            id: userId,
+            full_name: fullName,
+            avatar_url: avatarUrl
+          }
+        })
+        console.log(`Updated existing user with new auth ID: ${email}`)
+      } else {
+        // Create new user in Prisma DB
+        // Default role is 'student' - can be changed by admin later
+        await prisma.user.create({
+          data: {
+            id: userId,
+            email,
+            full_name: fullName,
+            role: 'student',
+            avatar_url: avatarUrl
+          }
+        })
+        console.log(`Created new user in database: ${email}`)
+      }
     } else {
       // Update existing user if needed
       await prisma.user.update({
@@ -33,7 +52,7 @@ export async function syncUserWithDatabase(userId: string, email: string, fullNa
         data: {
           email,
           full_name: fullName,
-          avatar_url: avatarUrl || existingUser.avatar_url
+          avatar_url: avatarUrl || existingUserById.avatar_url
         }
       })
       console.log(`Updated existing user in database: ${email}`)

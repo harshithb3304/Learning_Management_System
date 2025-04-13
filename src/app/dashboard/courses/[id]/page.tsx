@@ -38,6 +38,7 @@ import {
   uploadCourseResource,
   getCourseResources,
 } from "@/actions/courses";
+import Link from "next/link";
 
 interface User {
   id: string;
@@ -86,9 +87,7 @@ interface CourseResource {
 }
 
 interface CoursePageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default async function CoursePage({ params }: CoursePageProps) {
@@ -166,7 +165,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
   // Fetch course resources with Prisma
   const resourcesResult = await getCourseResources(courseId);
-  console.log("Resources result:", resourcesResult);
   const courseResources = resourcesResult.success
     ? resourcesResult.resources
     : [];
@@ -267,14 +265,13 @@ export default async function CoursePage({ params }: CoursePageProps) {
         return;
       }
 
-      // Return a success response that will be used for redirection
-      return { success: true, redirectTo: `/dashboard/courses/${courseId}?tab=resources` };
+      // Use redirect directly
+      redirect(`/dashboard/courses/${courseId}?tab=resources`);
     } catch (error) {
       // Only log actual errors, not redirect "errors"
-      if (!(error instanceof Error && error.message === 'NEXT_REDIRECT')) {
+      if (!(error instanceof Error && error.message === "NEXT_REDIRECT")) {
         console.error("Error processing file upload:", error);
       }
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   };
 
@@ -333,12 +330,9 @@ export default async function CoursePage({ params }: CoursePageProps) {
             {course.description || "No description provided"}
           </p>
         </div>
-        {(user.role === "admin" ||
-          (user.role === "teacher" && course.teacherId === user.id)) && (
-          <Button variant="outline" asChild>
-            <a href={`/dashboard/courses/${courseId}/edit`}>Edit Course</a>
-          </Button>
-        )}
+        <Button variant="outline" asChild>
+          <Link href={`/dashboard/courses`}>Back</Link>
+        </Button>
       </div>
 
       <Card>
