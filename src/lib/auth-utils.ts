@@ -1,22 +1,25 @@
-import { createClient } from '@/utils/supabase/server'
-import { prisma } from '@/lib/prisma'
+import { createClient } from "@/utils/supabase/server";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Synchronizes a Supabase user with the Prisma database
  * This ensures that when a user signs up via Supabase Auth,
  * they are also created in the Prisma database
  */
-export async function syncUserWithDatabase(userId: string, email: string, fullName: string, avatarUrl?: string) {
+export async function syncUserWithDatabase(
+  userId: string,
+  email: string,
+  fullName: string,
+  avatarUrl?: string
+) {
   try {
-    // Check if user already exists in Prisma DB by ID
     const existingUserById = await prisma.user.findUnique({
-      where: { id: userId }
-    })
+      where: { id: userId },
+    });
 
-    // Also check if user exists by email
     const existingUserByEmail = await prisma.user.findUnique({
-      where: { email }
-    })
+      where: { email },
+    });
 
     if (!existingUserById) {
       if (existingUserByEmail) {
@@ -27,10 +30,10 @@ export async function syncUserWithDatabase(userId: string, email: string, fullNa
           data: {
             id: userId,
             full_name: fullName,
-            avatar_url: avatarUrl
-          }
-        })
-        console.log(`Updated existing user with new auth ID: ${email}`)
+            avatar_url: avatarUrl,
+          },
+        });
+        console.log(`Updated existing user with new auth ID: ${email}`);
       } else {
         // Create new user in Prisma DB
         // Default role is 'student' - can be changed by admin later
@@ -39,11 +42,11 @@ export async function syncUserWithDatabase(userId: string, email: string, fullNa
             id: userId,
             email,
             full_name: fullName,
-            role: 'student',
-            avatar_url: avatarUrl
-          }
-        })
-        console.log(`Created new user in database: ${email}`)
+            role: "student",
+            avatar_url: avatarUrl,
+          },
+        });
+        console.log(`Created new user in database: ${email}`);
       }
     } else {
       // Update existing user if needed
@@ -52,16 +55,16 @@ export async function syncUserWithDatabase(userId: string, email: string, fullNa
         data: {
           email,
           full_name: fullName,
-          avatar_url: avatarUrl || existingUserById.avatar_url
-        }
-      })
-      console.log(`Updated existing user in database: ${email}`)
+          avatar_url: avatarUrl || existingUserById.avatar_url,
+        },
+      });
+      console.log(`Updated existing user in database: ${email}`);
     }
 
-    return { success: true }
+    return { success: true };
   } catch (error) {
-    console.error('Error syncing user with database:', error)
-    return { error: 'Failed to sync user with database' }
+    console.error("Error syncing user with database:", error);
+    return { error: "Failed to sync user with database" };
   }
 }
 
@@ -70,36 +73,40 @@ export async function syncUserWithDatabase(userId: string, email: string, fullNa
  */
 export async function getCurrentUser() {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     if (error || !user) {
-      return { user: null }
+      return { user: null };
     }
 
     // Get user from Prisma database
     const dbUser = await prisma.user.findUnique({
-      where: { id: user.id }
-    })
+      where: { id: user.id },
+    });
 
     // If user exists in Supabase but not in Prisma, create them
     if (!dbUser && user.email) {
-      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || 'User'
-      const avatarUrl = user.user_metadata?.avatar_url
+      const fullName =
+        user.user_metadata?.full_name || user.user_metadata?.name || "User";
+      const avatarUrl = user.user_metadata?.avatar_url;
 
-      await syncUserWithDatabase(user.id, user.email, fullName, avatarUrl)
-      
+      await syncUserWithDatabase(user.id, user.email, fullName, avatarUrl);
+
       // Fetch the newly created user
       const newDbUser = await prisma.user.findUnique({
-        where: { id: user.id }
-      })
-      
-      return { user: newDbUser }
+        where: { id: user.id },
+      });
+
+      return { user: newDbUser };
     }
 
-    return { user: dbUser }
+    return { user: dbUser };
   } catch (error) {
-    console.error('Error getting current user:', error)
-    return { user: null, error: 'Failed to get current user' }
+    console.error("Error getting current user:", error);
+    return { user: null, error: "Failed to get current user" };
   }
 }

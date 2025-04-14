@@ -2,83 +2,41 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { DeleteCourseButton } from "@/components/delete-course-button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth-utils";
-import { getCourses } from "@/actions/courses";
-import { prisma } from "@/lib/prisma";
-
-interface Teacher {
-  id: string;
-  full_name: string;
-  email: string;
-}
-
-interface Course {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  teacherId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  teacher: Teacher | null;
-}
-
-interface Enrollment {
-  id: string;
-  studentId: string;
-  courseId: string;
-  createdAt: Date;
-  course: Course;
-}
+import { getCourses, getEnrolledCourses } from "@/actions/courses";
 
 export default async function CoursesPage() {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  let courses: Course[] = [];
-  let enrolledCourses: Enrollment[] = [];
+  const { courses = [], error: coursesError } =
+    user.role !== "student"
+      ? await getCourses(user.role === "admin" ? undefined : user.id)
+      : { courses: [] };
 
-  if (user.role === "admin" || user.role === "teacher") {
-    // Fetch courses based on user role using the courses action
-    const { courses: fetchedCourses, error } = await getCourses(
-      user.role === "admin" ? undefined : user.id
-    );
+  const { enrollments = [], error: enrollmentsError } =
+    user.role === "student"
+      ? await getEnrolledCourses(user.id)
+      : { enrollments: [] };
 
-    if (error) {
-      console.error("Error fetching courses:", error);
-    }
+  if (coursesError) {
+    console.error("Error fetching courses:", coursesError);
+  }
 
-    courses = fetchedCourses || [];
-  } else if (user.role === "student") {
-    // Fetch enrolled courses for students
-    const enrollments = await prisma.enrollment.findMany({
-      where: {
-        studentId: user.id,
-      },
-      include: {
-        course: {
-          include: {
-            teacher: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    enrolledCourses = enrollments || [];
+  if (enrollmentsError) {
+    console.error("Error fetching enrollments:", enrollmentsError);
   }
 
   return (
@@ -101,60 +59,10 @@ export default async function CoursesPage() {
         )}
       </div>
 
-      {/* Admin and Teacher View */}
-      {(user.role === "admin" || user.role === "teacher") && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {courses.length > 0 ? (
-            courses.map((course) => (
-              <Card key={course.id} className="overflow-hidden">
-                <CardHeader className="p-4">
-                  <CardTitle className="line-clamp-1">{course.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">
-                    {course.description || "No description provided"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="space-y-2">
-                    {user.role === "admin" && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Teacher:</span>
-                        <span>{course.teacher?.full_name || "Unknown"}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Created:</span>
-                      <span>
-                        {format(new Date(course.createdAt), "MMM d, yyyy")}
-                      </span>
-                    </div>
-                    <div className="pt-4">
-                      <Button asChild className="w-full">
-                        <Link href={`/dashboard/courses/${course.id}`}>
-                          Manage Course
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full flex h-40 items-center justify-center rounded-lg border border-dashed">
-              <div className="text-center">
-                <p className="text-muted-foreground">
-                  No courses found. Create your first course to get started.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Student View */}
-      {user.role === "student" && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {enrolledCourses.length > 0 ? (
-            enrolledCourses.map((enrollment) => {
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {user.role === "student" ? (
+          enrollments.length > 0 ? (
+            enrollments.map((enrollment) => {
               const course = enrollment.course;
               return (
                 <Card key={enrollment.id} className="overflow-hidden">
@@ -175,7 +83,10 @@ export default async function CoursesPage() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Enrolled:</span>
                         <span>
-                          {format(new Date(enrollment.createdAt), "MMM d, yyyy")}
+                          {format(
+                            new Date(enrollment.createdAt),
+                            "MMM d, yyyy"
+                          )}
                         </span>
                       </div>
                       <div className="pt-4">
@@ -198,9 +109,63 @@ export default async function CoursesPage() {
                 </p>
               </div>
             </div>
-          )}
-        </div>
-      )}
+          )
+        ) : courses.length > 0 ? (
+          courses.map((course) => (
+            <Card key={course.id} className="overflow-hidden">
+              <CardHeader className="p-4">
+                <CardTitle className="line-clamp-1">{course.title}</CardTitle>
+                <CardDescription className="line-clamp-2">
+                  {course.description || "No description provided"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="space-y-2">
+                  {user.role === "admin" && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Teacher:</span>
+                      <span>{course.teacher?.full_name || "Unknown"}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Created:</span>
+                    <span>
+                      {format(new Date(course.createdAt), "MMM d, yyyy")}
+                    </span>
+                  </div>
+                  <div className="pt-4 space-y-2">
+                    <Button asChild className="w-full">
+                      <Link href={`/dashboard/courses/${course.id}`}>
+                        Manage Course
+                      </Link>
+                    </Button>
+                    {(user.role === "admin" ||
+                      (user.role === "teacher" &&
+                        course.teacherId === user.id)) && (
+                      <DeleteCourseButton
+                        courseId={course.id}
+                        userId={user.id}
+                        userRole={user.role}
+                        courseName={course.title}
+                      />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="col-span-full flex h-40 items-center justify-center rounded-lg border border-dashed">
+            <div className="text-center">
+              <p className="text-muted-foreground">
+                {user.role === "student"
+                  ? "You are not enrolled in any courses yet."
+                  : "No courses found. Create your first course to get started."}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

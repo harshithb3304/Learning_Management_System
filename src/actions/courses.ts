@@ -5,8 +5,32 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
 /**
- * Get all courses with optional filtering by teacher ID
+ * Get enrolled courses for a student
  */
+export async function getEnrolledCourses(studentId: string) {
+  try {
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        studentId,
+      },
+      include: {
+        course: {
+          include: {
+            teacher: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return { enrollments };
+  } catch (error) {
+    console.error('Error fetching enrolled courses:', error);
+    return { error: 'Failed to fetch enrolled courses' };
+  }
+}
+
 export async function getCourses(teacherId?: string) {
   try {
     const courses = await prisma.course.findMany({
@@ -117,11 +141,39 @@ export async function updateCourse(
 /**
  * Delete a course
  */
-export async function deleteCourse(id: string) {
+export async function deleteCourse(courseId: string, userId: string, userRole: string) {
   try {
-    await prisma.course.delete({
-      where: { id },
-    });
+    // Check if user has permission to delete the course
+    if (userRole !== "admin") {
+      const course = await prisma.course.findUnique({
+        where: { id: courseId },
+        select: { teacherId: true },
+      });
+
+      if (!course || course.teacherId !== userId) {
+        return { error: "You don't have permission to delete this course" };
+      }
+    }
+
+    // Delete all related records in a transaction
+    await prisma.$transaction([
+      // Delete course resources
+      prisma.courseResource.deleteMany({
+        where: { courseId },
+      }),
+      // Delete coursework
+      prisma.coursework.deleteMany({
+        where: { courseId },
+      }),
+      // Delete enrollments
+      prisma.enrollment.deleteMany({
+        where: { courseId },
+      }),
+      // Finally, delete the course
+      prisma.course.delete({
+        where: { id: courseId },
+      }),
+    ]);
 
     revalidatePath("/dashboard/courses");
     return { success: true };

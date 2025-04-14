@@ -15,7 +15,6 @@ import { getCurrentUser } from "@/lib/auth-utils";
 import Link from "next/link";
 
 export default async function LoginPage() {
-  // Check if user is already logged in
   const { user } = await getCurrentUser();
   if (user) {
     redirect("/dashboard");
@@ -63,19 +62,16 @@ export default async function LoginPage() {
     }
 
     try {
-      // First, check if the user exists in Supabase Auth
       const supabase = await createClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password: password || "password123", // Use default password if not provided
+        password: password || "password123",
       });
 
       if (error) {
         console.error("Error signing in with email:", error);
 
-        // If user doesn't exist in Auth, try to create them
         if (error.message.includes("Invalid login credentials")) {
-          // For test accounts, create them if they don't exist
           if (email.endsWith("@lms.com") && password === "password123") {
             const { error: signUpError } = await supabase.auth.signUp({
               email,
@@ -90,7 +86,6 @@ export default async function LoginPage() {
               return;
             }
 
-            // Try signing in again
             const { error: retryError } =
               await supabase.auth.signInWithPassword({
                 email,

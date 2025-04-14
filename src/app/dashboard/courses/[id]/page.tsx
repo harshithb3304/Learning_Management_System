@@ -27,7 +27,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { CancelButton } from "@/components/cancel-button";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-utils";
 import {
   unenrollStudent,
@@ -36,149 +35,59 @@ import {
   uploadCourseResource,
   getCourseResources,
 } from "@/actions/courses";
+import { getCourseDetails } from "@/actions/course-details";
 import { getTeachers } from "@/actions/users";
 import { ChangeTeacherDialog } from "@/components/change-teacher-dialog";
 import { AddCourseworkForm } from "@/components/add-coursework-form";
 import { EnrollStudentsForm } from "@/components/enroll-students-form";
 import Link from "next/link";
 
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  avatar_url: string | null;
-  createdAt: Date;
-}
 
-interface Course {
-  id: string;
-  title: string;
-  description: string | null;
-  teacherId: string | null;
-  createdAt: Date;
-  teacher: User | null;
-}
 
-interface Enrollment {
-  id: string;
-  studentId: string;
-  courseId: string;
-  createdAt: Date;
-  student: User | null;
-}
-
-interface Coursework {
-  id: string;
-  title: string;
-  description: string | null;
-  courseId: string;
-  dueDate: Date | null;
-  createdAt: Date;
-}
-
-interface CourseResource {
-  id: string;
-  name: string;
-  description: string | null;
-  fileUrl: string;
-  fileType: string;
-  fileSize: number;
-  courseId: string;
-  createdAt: Date;
-}
+type Course = NonNullable<Awaited<ReturnType<typeof getCourseDetails>>['course']>;
+type Enrollment = NonNullable<Awaited<ReturnType<typeof getCourseDetails>>['enrollments']>[number];
+type CourseResource = NonNullable<Awaited<ReturnType<typeof getCourseResources>>['resources']>[number];
+type Teacher = NonNullable<Awaited<ReturnType<typeof getTeachers>>['teachers']>[number];
 
 interface CoursePageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default async function CoursePage({ params }: CoursePageProps) {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
-  // Await params to access its properties
-  const { id: courseId } = await params;
+  const { id: courseId } = await Promise.resolve(params);
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Fetch course details with Prisma
-  const courseData = await prisma.course.findUnique({
-    where: {
-      id: courseId,
-    },
-    include: {
-      teacher: true,
-    },
-  });
+  const { course, isEnrolled, enrollments, coursework: courseContent = [], availableStudents = [], error } = await getCourseDetails(courseId, user.id, user.role);
 
-  if (!courseData) {
+  if (error) {
+    console.error("Error fetching course details:", error);
+  }
+
+  if (!course) {
     redirect("/dashboard/courses");
   }
 
-  const course: Course = courseData;
-
-  // Check if user has permission to view this course
   if (user.role === "teacher" && course.teacherId && course.teacherId !== user.id) {
     redirect("/dashboard/courses");
   }
 
-  if (user.role === "student") {
-    // Check if student is enrolled in this course
-    const enrollment = await prisma.enrollment.findFirst({
-      where: {
-        courseId: courseId,
-        studentId: user.id,
-      },
-    });
-
-    if (!enrollment) {
-      redirect("/dashboard/my-courses");
-    }
+  if (user.role === "student" && !isEnrolled) {
+    redirect("/dashboard/courses");
   }
-
-  // Fetch enrolled students with Prisma
-  const enrollments = await prisma.enrollment.findMany({
-    where: {
-      courseId: courseId,
-    },
-    include: {
-      student: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
 
   const enrolledStudents = enrollments || [];
 
-  // Fetch coursework with Prisma
-  const coursework = await prisma.coursework.findMany({
-    where: {
-      courseId: courseId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  const courseContent = coursework || [];
-
-  // Fetch course resources with Prisma
   const resourcesResult = await getCourseResources(courseId);
   const courseResources = resourcesResult.success
     ? resourcesResult.resources
     : [];
-    
-  // Fetch all teachers for admin to change course teacher
-  interface TeacherType {
-    id: string;
-    full_name: string;
-    email: string;
-  }
-  
-  let availableTeachers: TeacherType[] = [];
+
+  let availableTeachers: Teacher[] = [];
   if (user.role === "admin") {
     const { teachers, error: teachersError } = await getTeachers();
     if (teachersError) {
@@ -188,10 +97,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
     }
   }
 
-  // Server actions for resource handling and unenrollment remain server-side
-  // Client-side components will handle coursework and enrollment
-
-  // Handle file upload for course resources
   const handleResourceUpload = async (formData: FormData) => {
     "use server";
 
@@ -205,7 +110,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
     }
 
     try {
-      // Upload the file directly using the server action
       const uploadResult = await uploadCourseResource(file, courseId);
 
       if (!uploadResult.success) {
@@ -213,7 +117,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
         return;
       }
 
-      // Make sure we have the data before destructuring
       if (!uploadResult.data) {
         console.error("No data returned from upload");
         return;
@@ -221,7 +124,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
       const fileUrl = uploadResult.data.fileUrl;
 
-      // Add the resource to the database
       const { error: resourceError } = await addCourseResource({
         name,
         description: description || undefined,
@@ -236,17 +138,14 @@ export default async function CoursePage({ params }: CoursePageProps) {
         return;
       }
 
-      // Use redirect directly
       redirect(`/dashboard/courses/${courseId}?tab=resources`);
     } catch (error) {
-      // Only log actual errors, not redirect "errors"
       if (!(error instanceof Error && error.message === "NEXT_REDIRECT")) {
         console.error("Error processing file upload:", error);
       }
     }
   };
 
-  // Handle resource deletion
   const handleDeleteResource = async (resourceId: string) => {
     "use server";
 
@@ -259,38 +158,6 @@ export default async function CoursePage({ params }: CoursePageProps) {
 
     redirect(`/dashboard/courses/${courseId}?tab=resources`);
   };
-
-  // Fetch available students for enrollment (not already enrolled)
-  interface AvailableStudent {
-    id: string;
-    full_name: string;
-    email: string;
-  }
-
-  let availableStudents: AvailableStudent[] = [];
-  if (
-    user.role === "admin" ||
-    (user.role === "teacher" && course.teacherId === user.id)
-  ) {
-    const enrolledStudentIds = enrolledStudents.map((e) => e.studentId);
-
-    // Get all students who are not enrolled in this course
-    const students = await prisma.user.findMany({
-      where: {
-        role: "student",
-        id: {
-          notIn: enrolledStudentIds,
-        },
-      },
-      select: {
-        id: true,
-        full_name: true,
-        email: true,
-      },
-    });
-
-    availableStudents = students || [];
-  }
 
   return (
     <div className="space-y-6">
@@ -393,7 +260,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseContent.map((item: Coursework) => (
+                    {courseContent.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {item.title}
@@ -616,7 +483,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseResources?.map((resource: CourseResource) => (
+                    {courseResources?.map((resource) => (
                       <TableRow key={resource.id}>
                         <TableCell className="font-medium">
                           {resource.name}

@@ -37,19 +37,15 @@ import { getUsers, updateUser } from "@/actions/users";
 import { DeleteUserDialog } from "@/components/delete-user-dialog";
 
 export default async function UsersPage() {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Only admin role can access this page
   if (user.role !== "admin") {
     redirect("/dashboard");
   }
-
-  // Fetch all users using the users action
   const { users: fetchedUsers, error } = await getUsers();
 
   if (error) {

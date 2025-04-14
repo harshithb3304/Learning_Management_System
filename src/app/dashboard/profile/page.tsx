@@ -10,12 +10,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { prisma } from "@/lib/prisma";
+import { updateUserProfile } from "@/actions/profile";
 import { getCurrentUser } from "@/lib/auth-utils";
 import { ProfileAvatarUpload } from "@/components/profile-avatar-upload";
 
 export default async function ProfilePage() {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
   if (!user) {
@@ -44,13 +43,9 @@ export default async function ProfilePage() {
       return;
     }
 
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { full_name: fullName },
-      });
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    const { error } = await updateUserProfile(user.id, { full_name: fullName });
+    if (error) {
+      console.error(error);
       return;
     }
 

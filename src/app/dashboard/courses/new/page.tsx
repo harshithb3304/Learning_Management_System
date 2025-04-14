@@ -11,20 +11,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { prisma } from "@/lib/prisma";
+import { getTeachers } from "@/actions/users";
 import { getCurrentUser } from "@/lib/auth-utils";
 import { createCourse } from "@/actions/courses";
 import Link from "next/link";
 
 export default async function NewCoursePage() {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Only admin and teacher roles can access this page
   if (user.role !== "admin" && user.role !== "teacher") {
     redirect("/dashboard");
   }
@@ -40,14 +38,12 @@ export default async function NewCoursePage() {
       return;
     }
 
-    // Get current user with Prisma
     const { user } = await getCurrentUser();
 
     if (!user) {
       redirect("/auth/login");
     }
 
-    // For admin, we need to check if they specified a teacher_id
     let teacherId = user.id;
 
     if (user.role === "admin") {
@@ -71,35 +67,33 @@ export default async function NewCoursePage() {
     redirect("/dashboard/courses");
   };
 
-  // If admin, fetch all teachers for the dropdown
-  interface Teacher {
-    id: string;
-    full_name: string;
-  }
-
+  type Teacher = NonNullable<
+    Awaited<ReturnType<typeof getTeachers>>["teachers"]
+  >[number];
   let teachers: Teacher[] = [];
   if (user.role === "admin") {
-    // Get all teachers with Prisma
-    const teacherUsers = await prisma.user.findMany({
-      where: {
-        role: "teacher",
-      },
-      select: {
-        id: true,
-        full_name: true,
-      },
-    });
-
-    teachers = teacherUsers || [];
+    const { teachers: teacherUsers, error } = await getTeachers();
+    if (error) {
+      console.error("Error fetching teachers:", error);
+    } else {
+      teachers = teacherUsers || [];
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create New Course</h1>
-        <p className="text-muted-foreground">
-          Add a new course to the learning management system
-        </p>
+      <div className="flex justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Create New Course
+          </h1>
+          <p className="text-muted-foreground">
+            Add a new course to the learning management system
+          </p>
+        </div>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/courses">Back</Link>
+        </Button>
       </div>
 
       <Card>

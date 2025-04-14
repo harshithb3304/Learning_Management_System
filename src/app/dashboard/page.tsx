@@ -6,53 +6,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { getDashboardStats } from "@/actions/stats";
 import { getCurrentUser } from "@/lib/auth-utils";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 export default async function DashboardPage() {
-  // Get current user with Prisma
   const { user } = await getCurrentUser();
 
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Fetch data based on user role
-  let courseCount = 0;
-  let studentCount = 0;
-  let enrollmentCount = 0;
+  const {
+    courseCount = 0,
+    studentCount = 0,
+    teacherCount = 0,
+    enrollmentCount = 0,
+    error,
+  } = await getDashboardStats(user.id, user.role);
 
-  if (user.role === "admin") {
-    // Admin sees all courses and users
-    courseCount = await prisma.course.count();
-
-    studentCount = await prisma.user.count({
-      where: { role: "student" },
-    });
-
-    enrollmentCount = await prisma.user.count({
-      where: { role: "teacher" },
-    });
-  } else if (user.role === "teacher") {
-    // Teacher sees their own courses and enrolled students
-    courseCount = await prisma.course.count({
-      where: { teacherId: user.id },
-    });
-
-    enrollmentCount = await prisma.enrollment.count({
-      where: {
-        course: {
-          teacherId: user.id,
-        },
-      },
-    });
-  } else if (user.role === "student") {
-    // Student sees enrolled courses
-    enrollmentCount = await prisma.enrollment.count({
-      where: { studentId: user.id },
-    });
+  if (error) {
+    console.error("Error fetching dashboard stats:", error);
   }
 
   return (
@@ -92,7 +67,7 @@ export default async function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{enrollmentCount}</div>
+                <div className="text-2xl font-bold">{teacherCount}</div>
               </CardContent>
             </Card>
           </>
@@ -201,7 +176,7 @@ export default async function DashboardPage() {
             )}
 
             {user.role === "student" && (
-              <Link href="/dashboard/my-courses">
+              <Link href="/dashboard/courses">
                 <div className="rounded-lg border p-4 cursor-pointer hover:bg-muted transition">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold">View Courses</h3>
