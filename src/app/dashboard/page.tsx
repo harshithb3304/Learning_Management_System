@@ -161,7 +161,7 @@ export default async function DashboardPage() {
                     </p>
                   </div>
                 </Link>
-                <Link href="/dashboard/users">
+                <Link href="/dashboard/courses">
                   <div className="rounded-lg border p-4 cursor-pointer hover:bg-muted transition">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold">Manage Students</h3>
