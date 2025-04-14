@@ -166,19 +166,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Log in using Google authentication. The first user to register will automatically be assigned the admin role.
 
-## Application Structure
-
-```
-src/
-├── app/                    # Next.js app directory
-│   ├── auth/               # Authentication pages
-│   ├── dashboard/          # Dashboard and role-based pages
-│   └── page.tsx            # Landing page
-├── components/             # React components
-│   ├── layout/             # Layout components
-│   └── ui/                 # UI components from shadcn/ui
-├── lib/                    # Utility functions
-│   └── supabase/           # Supabase client setup
-└── types/                  # TypeScript type definitions
-```
 
