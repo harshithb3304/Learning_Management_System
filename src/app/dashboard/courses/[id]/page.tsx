@@ -50,13 +50,15 @@ type CourseResource = NonNullable<Awaited<ReturnType<typeof getCourseResources>>
 type Teacher = NonNullable<Awaited<ReturnType<typeof getTeachers>>['teachers']>[number];
 
 interface CoursePageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function CoursePage({ params }: CoursePageProps) {
   const { user } = await getCurrentUser();
 
-  const { id: courseId } = await Promise.resolve(params);
+  const resolvedParams = await params;
+  const courseId = resolvedParams.id;
 
   if (!user) {
     redirect("/auth/login");
