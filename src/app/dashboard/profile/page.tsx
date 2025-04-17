@@ -109,6 +109,7 @@ export default async function ProfilePage() {
           <CardContent>
             <ProfileAvatarUpload
               userId={user.id}
+              userRole={user.role}
               currentAvatarUrl={user.avatar_url}
               userFullName={user.full_name}
               userInitials={userInitials}

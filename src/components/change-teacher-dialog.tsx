@@ -32,12 +32,16 @@ interface ChangeTeacherDialogProps {
   courseId: string;
   currentTeacherId?: string;
   teachers: Teacher[];
+  userId: string;
+  userRole: string;
 }
 
 export function ChangeTeacherDialog({
   courseId,
   currentTeacherId,
   teachers,
+  userId,
+  userRole,
 }: ChangeTeacherDialogProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>(
     currentTeacherId || ""
@@ -53,7 +57,7 @@ export function ChangeTeacherDialog({
     try {
       const result = await updateCourse(courseId, {
         teacherId: selectedTeacherId,
-      });
+      }, userId, userRole);
       
       if (result.error) {
         console.error("Error updating course teacher:", result.error);

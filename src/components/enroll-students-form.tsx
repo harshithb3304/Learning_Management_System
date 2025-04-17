@@ -31,9 +31,11 @@ interface Student {
 interface EnrollStudentsFormProps {
   courseId: string;
   availableStudents: Student[];
+  userId: string;
+  userRole: string;
 }
 
-export function EnrollStudentsForm({ courseId, availableStudents }: EnrollStudentsFormProps) {
+export function EnrollStudentsForm({ courseId, availableStudents, userId, userRole }: EnrollStudentsFormProps) {
   const [selectedStudents, setSelectedStudents] = useState<Student[]>([]);
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,7 +59,7 @@ export function EnrollStudentsForm({ courseId, availableStudents }: EnrollStuden
         const result = await enrollStudent({
           courseId,
           studentId: student.id,
-        });
+        }, userId, userRole);
 
         if (result.error) {
           setError(`Error enrolling ${student.full_name}: ${result.error}`);

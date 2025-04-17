@@ -19,12 +19,14 @@ interface DeleteUserDialogProps {
   userId: string;
   userName: string;
   onDeleteSuccess?: () => void;
+  disabled?: boolean;
 }
 
 export function DeleteUserDialog({
   userId,
   userName,
   onDeleteSuccess,
+  disabled = false,
 }: DeleteUserDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -36,7 +38,18 @@ export function DeleteUserDialog({
     setError(null);
 
     try {
-      const result = await deleteUser(userId);
+      // Get the current user for authorization
+      const response = await fetch('/api/auth/session');
+      const session = await response.json();
+      const currentUser = session?.user;
+      
+      if (!currentUser) {
+        setError("Authentication error");
+        setIsDeleting(false);
+        return;
+      }
+      
+      const result = await deleteUser(userId, currentUser.id, currentUser.role);
 
       if (result.error) {
         setError(result.error);
@@ -62,7 +75,7 @@ export function DeleteUserDialog({
         <Button
           variant="destructive"
           size="sm"
-          
+          disabled={disabled}
         >
           Remove
         </Button>

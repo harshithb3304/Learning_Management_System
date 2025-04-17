@@ -37,13 +37,13 @@ import { getUsers, updateUser } from "@/actions/users";
 import { DeleteUserDialog } from "@/components/delete-user-dialog";
 
 export default async function UsersPage() {
-  const { user } = await getCurrentUser();
+  const { user: currentUser } = await getCurrentUser();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/auth/login");
   }
 
-  if (user.role !== "admin") {
+  if (currentUser.role !== "admin") {
     redirect("/dashboard");
   }
   const { users: fetchedUsers, error } = await getUsers();
@@ -57,6 +57,11 @@ export default async function UsersPage() {
   const updateUserRole = async (formData: FormData) => {
     "use server";
 
+    const { user: actionUser } = await getCurrentUser();
+    if (!actionUser) {
+      redirect("/auth/login");
+    }
+
     const userId = formData.get("user_id") as string;
     const role = formData.get("role") as "admin" | "teacher" | "student";
 
@@ -65,7 +70,7 @@ export default async function UsersPage() {
       return;
     }
 
-    const { error } = await updateUser(userId, { role });
+    const { error } = await updateUser(userId, { role }, actionUser.id, actionUser.role);
 
     if (error) {
       console.error("Error updating user role:", error);
@@ -132,7 +137,11 @@ export default async function UsersPage() {
                       <div className="flex justify-end gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="default" size="sm">
+                            <Button 
+                              variant="default" 
+                              size="sm"
+                              disabled={user.role === "admin"}
+                            >
                               Edit Role
                             </Button>
                           </DialogTrigger>
@@ -179,6 +188,7 @@ export default async function UsersPage() {
                         <DeleteUserDialog
                           userId={user.id}
                           userName={user.full_name}
+                          disabled={user.role === "admin"}
                         />
                       </div>
                     </TableCell>

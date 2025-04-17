@@ -11,6 +11,7 @@ import { Loader2, Upload, X, Trash2 } from "lucide-react";
 
 interface ProfileAvatarUploadProps {
   userId: string;
+  userRole: string;
   currentAvatarUrl: string | null;
   userFullName: string;
   userInitials: string;
@@ -18,6 +19,7 @@ interface ProfileAvatarUploadProps {
 
 export function ProfileAvatarUpload({
   userId,
+  userRole,
   currentAvatarUrl,
   userFullName,
   userInitials,
@@ -70,7 +72,7 @@ export function ProfileAvatarUpload({
       const publicUrl = publicUrlData.publicUrl;
 
       // Update user profile with new avatar URL
-      const result = await updateUser(userId, { avatar_url: publicUrl });
+      const result = await updateUser(userId, { avatar_url: publicUrl }, userId, userRole);
 
       if (result.error) {
         throw new Error(result.error);
@@ -101,7 +103,7 @@ export function ProfileAvatarUpload({
 
     try {
       // Update user profile to remove avatar URL
-      const result = await updateUser(userId, { avatar_url: "" });
+      const result = await updateUser(userId, { avatar_url: "" }, userId, userRole);
 
       if (result.error) {
         throw new Error(result.error);

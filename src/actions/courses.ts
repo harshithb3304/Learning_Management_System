@@ -97,8 +97,30 @@ export async function createCourse(data: {
   description?: string;
   imageUrl?: string;
   teacherId: string;
-}) {
+}, userRole: string, userId: string) {
   try {
+    // Check if user has permission to create a course
+    if (userRole !== 'admin' && userRole !== 'teacher') {
+      return { error: "You don't have permission to create courses" };
+    }
+
+    // If user is a teacher, they can only create courses for themselves
+    if (userRole === 'teacher' && data.teacherId !== userId) {
+      return { error: "Teachers can only create courses for themselves" };
+    }
+
+    // Check for duplicate course name for the same teacher
+    const existingCourse = await prisma.course.findFirst({
+      where: {
+        title: data.title,
+        teacherId: data.teacherId
+      }
+    });
+
+    if (existingCourse) {
+      return { error: "You already have a course with this name" };
+    }
+
     const course = await prisma.course.create({
       data,
     });
@@ -121,9 +143,47 @@ export async function updateCourse(
     description?: string;
     imageUrl?: string;
     teacherId?: string;
-  }
+  },
+  userId: string,
+  userRole: string
 ) {
   try {
+    // Get the current course to check permissions
+    const currentCourse = await prisma.course.findUnique({
+      where: { id },
+      select: { teacherId: true, title: true }
+    });
+
+    if (!currentCourse) {
+      return { error: "Course not found" };
+    }
+
+    // Check if user has permission to update the course
+    if (userRole !== 'admin' && currentCourse.teacherId !== userId) {
+      return { error: "You don't have permission to update this course" };
+    }
+
+    // Only admin can change the teacher of a course
+    if (data.teacherId && data.teacherId !== currentCourse.teacherId && userRole !== 'admin') {
+      return { error: "Only administrators can reassign courses to different teachers" };
+    }
+
+    // If title is being changed, check for duplicates
+    if (data.title && data.title !== currentCourse.title) {
+      const teacherId = data.teacherId || currentCourse.teacherId;
+      const existingCourse = await prisma.course.findFirst({
+        where: {
+          title: data.title,
+          teacherId: teacherId,
+          id: { not: id } // Exclude current course
+        }
+      });
+
+      if (existingCourse) {
+        return { error: "A course with this name already exists for this teacher" };
+      }
+    }
+
     const course = await prisma.course.update({
       where: { id },
       data,
@@ -186,14 +246,34 @@ export async function deleteCourse(courseId: string, userId: string, userRole: s
 /**
  * Remove a student from a course
  */
-export async function unenrollStudent(enrollmentId: string) {
+export async function unenrollStudent(enrollmentId: string, userId: string, userRole: string) {
   try {
-    const enrollment = await prisma.enrollment.delete({
-      where: {
-        id: enrollmentId,
-      },
+    // First get the enrollment to check permissions
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
       include: {
         course: true,
+        student: true
+      }
+    });
+
+    if (!enrollment) {
+      return { error: "Enrollment not found" };
+    }
+
+    // Check if user has permission to unenroll the student
+    // Only admin, the course teacher, or the student themselves can unenroll
+    const isSelfUnenrollment = userId === enrollment.studentId;
+    const isTeacherOfCourse = enrollment.course.teacherId === userId;
+
+    if (userRole !== 'admin' && !isTeacherOfCourse && !isSelfUnenrollment) {
+      return { error: "You don't have permission to unenroll this student" };
+    }
+
+    // Now delete the enrollment
+    await prisma.enrollment.delete({
+      where: {
+        id: enrollmentId,
       },
     });
 
@@ -214,8 +294,23 @@ export async function addCoursework(data: {
   description?: string;
   courseId: string;
   dueDate?: string;
-}) {
+}, userId: string, userRole: string) {
   try {
+    // Check if the course exists and if the user has permission
+    const course = await prisma.course.findUnique({
+      where: { id: data.courseId },
+      select: { teacherId: true }
+    });
+
+    if (!course) {
+      return { error: "Course not found" };
+    }
+
+    // Only admin or the course teacher can add coursework
+    if (userRole !== 'admin' && course.teacherId !== userId) {
+      return { error: "You don't have permission to add coursework to this course" };
+    }
+
     const coursework = await prisma.coursework.create({
       data: {
         title: data.title,
@@ -239,8 +334,41 @@ export async function addCoursework(data: {
 export async function enrollStudent(data: {
   courseId: string;
   studentId: string;
-}) {
+}, userId: string, userRole: string) {
   try {
+    // Check if the course exists
+    const course = await prisma.course.findUnique({
+      where: { id: data.courseId },
+      select: { teacherId: true }
+    });
+
+    if (!course) {
+      return { error: "Course not found" };
+    }
+
+    // Check if user has permission to enroll students
+    // Only admin, the course teacher, or the student themselves can enroll
+    const isSelfEnrollment = userId === data.studentId;
+    const isTeacherOfCourse = course.teacherId === userId;
+
+    if (userRole !== 'admin' && !isTeacherOfCourse && !isSelfEnrollment) {
+      return { error: "You don't have permission to enroll students in this course" };
+    }
+
+    // Check if the user being enrolled is actually a student
+    const student = await prisma.user.findUnique({
+      where: { id: data.studentId },
+      select: { role: true }
+    });
+
+    if (!student) {
+      return { error: "Student not found" };
+    }
+
+    if (student.role !== 'student') {
+      return { error: "Only users with student role can be enrolled in courses" };
+    }
+
     // Check if student is already enrolled
     const existingEnrollment = await prisma.enrollment.findUnique({
       where: {
@@ -278,8 +406,23 @@ export async function enrollStudent(data: {
 /**
  * Upload a file to course resources bucket using standard upload
  */
-export async function uploadCourseResource(file: File, courseId: string) {
+export async function uploadCourseResource(file: File, courseId: string, userId: string, userRole: string) {
   try {
+    // Check if the course exists and if the user has permission
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { teacherId: true }
+    });
+
+    if (!course) {
+      return { success: false, error: "Course not found" };
+    }
+
+    // Only admin or the course teacher can upload resources
+    if (userRole !== 'admin' && course.teacherId !== userId) {
+      return { success: false, error: "You don't have permission to upload resources to this course" };
+    }
+
     const supabase = await createClient();
 
     // Create a unique file path to avoid conflicts
@@ -330,8 +473,23 @@ export async function addCourseResource(data: {
   fileUrl: string;
   fileType: string;
   fileSize: number;
-}) {
+}, userId: string, userRole: string) {
   try {
+    // Check if the course exists and if the user has permission
+    const course = await prisma.course.findUnique({
+      where: { id: data.courseId },
+      select: { teacherId: true }
+    });
+
+    if (!course) {
+      return { success: false, error: "Course not found" };
+    }
+
+    // Only admin or the course teacher can add resources
+    if (userRole !== 'admin' && course.teacherId !== userId) {
+      return { success: false, error: "You don't have permission to add resources to this course" };
+    }
+
     const resource = await prisma.courseResource.create({
       data: {
         name: data.name,
@@ -387,15 +545,27 @@ export async function getCourseResources(courseId: string) {
 /**
  * Delete a course resource
  */
-export async function deleteCourseResource(id: string) {
+export async function deleteCourseResource(id: string, userId: string, userRole: string) {
   try {
-    // First get the resource to get the file path
+    // First get the resource to get the file path and check permissions
     const resource = await prisma.courseResource.findUnique({
       where: { id },
+      include: {
+        course: {
+          select: {
+            teacherId: true
+          }
+        }
+      }
     });
 
     if (!resource) {
       return { success: false, error: "Resource not found" };
+    }
+
+    // Check if user has permission to delete the resource
+    if (userRole !== 'admin' && resource.course.teacherId !== userId) {
+      return { success: false, error: "You don't have permission to delete this resource" };
     }
 
     // Delete from database

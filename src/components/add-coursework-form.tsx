@@ -10,9 +10,11 @@ import { addCoursework } from "@/actions/courses";
 
 interface AddCourseworkFormProps {
   courseId: string;
+  userId: string;
+  userRole: string;
 }
 
-export function AddCourseworkForm({ courseId }: AddCourseworkFormProps) {
+export function AddCourseworkForm({ courseId, userId, userRole }: AddCourseworkFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -37,7 +39,7 @@ export function AddCourseworkForm({ courseId }: AddCourseworkFormProps) {
         description: description.trim() || undefined,
         courseId,
         dueDate: dueDate || undefined,
-      });
+      }, userId, userRole);
 
       if (result.error) {
         setError(result.error);

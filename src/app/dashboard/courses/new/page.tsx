@@ -7,14 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 import { getTeachers } from "@/actions/users";
 import { getCurrentUser } from "@/lib/auth-utils";
-import { createCourse } from "@/actions/courses";
 import Link from "next/link";
+import { CreateCourseForm } from "@/components/create-course-form";
 
 export default async function NewCoursePage() {
   const { user } = await getCurrentUser();
@@ -26,46 +23,6 @@ export default async function NewCoursePage() {
   if (user.role !== "admin" && user.role !== "teacher") {
     redirect("/dashboard");
   }
-
-  const handleCreateCourse = async (formData: FormData) => {
-    "use server";
-
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-
-    if (!title) {
-      console.error("Title is required");
-      return;
-    }
-
-    const { user } = await getCurrentUser();
-
-    if (!user) {
-      redirect("/auth/login");
-    }
-
-    let teacherId = user.id;
-
-    if (user.role === "admin") {
-      const selectedTeacherId = formData.get("teacher_id") as string;
-      if (selectedTeacherId) {
-        teacherId = selectedTeacherId;
-      }
-    }
-
-    const { error } = await createCourse({
-      title,
-      description,
-      teacherId,
-    });
-
-    if (error) {
-      console.error("Error creating course:", error);
-      return;
-    }
-
-    redirect("/dashboard/courses");
-  };
 
   type Teacher = NonNullable<
     Awaited<ReturnType<typeof getTeachers>>["teachers"]
@@ -104,55 +61,11 @@ export default async function NewCoursePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={handleCreateCourse} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Course Title</Label>
-              <Input
-                id="title"
-                name="title"
-                placeholder="Introduction to Programming"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Course Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="A comprehensive introduction to programming concepts..."
-                rows={4}
-              />
-            </div>
-
-            {user.role === "admin" && teachers.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="teacher_id">Assign Teacher</Label>
-                <select
-                  id="teacher_id"
-                  name="teacher_id"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2"
-                >
-                  <option value="">Select a teacher</option>
-                  {teachers.map((teacher) => (
-                    <option key={teacher.id} value={teacher.id}>
-                      {teacher.full_name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">
-                  Leave empty to assign yourself as the teacher
-                </p>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" asChild>
-                <Link href="/dashboard/courses">Cancel</Link>
-              </Button>
-              <Button type="submit">Create Course</Button>
-            </div>
-          </form>
+          <CreateCourseForm 
+            userId={user.id} 
+            userRole={user.role} 
+            teachers={teachers} 
+          />
         </CardContent>
       </Card>
     </div>

@@ -102,6 +102,11 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const handleResourceUpload = async (formData: FormData) => {
     "use server";
 
+    const { user } = await getCurrentUser();
+    if (!user) {
+      redirect("/auth/login");
+    }
+
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
     const file = formData.get("file") as File;
@@ -112,7 +117,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
     }
 
     try {
-      const uploadResult = await uploadCourseResource(file, courseId);
+      const uploadResult = await uploadCourseResource(file, courseId, user.id, user.role);
 
       if (!uploadResult.success) {
         console.error("Error uploading file:", uploadResult.error);
@@ -133,7 +138,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
         fileUrl,
         fileType: file.type,
         fileSize: file.size,
-      });
+      }, user.id, user.role);
 
       if (resourceError) {
         console.error("Error adding resource:", resourceError);
@@ -151,7 +156,12 @@ export default async function CoursePage({ params }: CoursePageProps) {
   const handleDeleteResource = async (resourceId: string) => {
     "use server";
 
-    const { error } = await deleteCourseResource(resourceId);
+    const { user } = await getCurrentUser();
+    if (!user) {
+      redirect("/auth/login");
+    }
+
+    const { error } = await deleteCourseResource(resourceId, user.id, user.role);
 
     if (error) {
       console.error("Error deleting resource:", error);
@@ -189,6 +199,8 @@ export default async function CoursePage({ params }: CoursePageProps) {
                     courseId={courseId}
                     currentTeacherId={course.teacherId || ""}
                     teachers={availableTeachers}
+                    userId={user.id}
+                    userRole={user.role}
                   />
                 )}
               </div>
@@ -237,7 +249,7 @@ export default async function CoursePage({ params }: CoursePageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AddCourseworkForm courseId={courseId} />
+                <AddCourseworkForm courseId={courseId} userId={user.id} userRole={user.role} />
               </CardContent>
             </Card>
           )}
@@ -319,7 +331,9 @@ export default async function CoursePage({ params }: CoursePageProps) {
                       <div className="pt-4">
                         <EnrollStudentsForm 
                           courseId={courseId} 
-                          availableStudents={availableStudents} 
+                          availableStudents={availableStudents}
+                          userId={user.id}
+                          userRole={user.role}
                         />
                       </div>
                     </DialogContent>
@@ -374,7 +388,11 @@ export default async function CoursePage({ params }: CoursePageProps) {
                             <form
                               action={async () => {
                                 "use server";
-                                await unenrollStudent(enrollment.id);
+                                const { user } = await getCurrentUser();
+                                if (!user) {
+                                  redirect("/auth/login");
+                                }
+                                await unenrollStudent(enrollment.id, user.id, user.role);
                                 return redirect(
                                   `/dashboard/courses/${courseId}?tab=students`
                                 );

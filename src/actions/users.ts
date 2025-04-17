@@ -56,8 +56,13 @@ export async function createUser(data: {
   full_name: string
   role: string
   avatar_url?: string
-}) {
+}, userId: string, userRole: string) {
   try {
+    // Only admins can create users
+    if (userRole !== 'admin') {
+      return { error: "You don't have permission to create users" };
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
     })
@@ -85,8 +90,42 @@ export async function updateUser(id: string, data: {
   full_name?: string
   role?: string
   avatar_url?: string
-}) {
+}, userId: string, userRole: string) {
   try {
+    // Get the user to be updated
+    const userToUpdate = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!userToUpdate) {
+      return { error: 'User not found' };
+    }
+
+    // Check permissions
+    if (userRole !== 'admin' && id !== userId) {
+      return { error: "You don't have permission to update this user" };
+    }
+
+    // If the user is trying to change the role
+    if (data.role && data.role !== userToUpdate.role) {
+      // Only admins can change roles
+      if (userRole !== 'admin') {
+        return { error: "Only administrators can change user roles" };
+      }
+
+      // Prevent changing role of other admins
+      if (userToUpdate.role === 'admin' && id !== userId) {
+        return { error: "Cannot change the role of another administrator" };
+      }
+    }
+
+    // Non-admins can only update their own profile and cannot change their role
+    if (userRole !== 'admin') {
+      // Remove role from data if present
+      const { role, ...safeData } = data;
+      data = safeData;
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data
@@ -126,8 +165,13 @@ export async function getTeachers() {
   }
 }
 
-export async function deleteUser(id: string) {
+export async function deleteUser(id: string, userId: string, userRole: string) {
   try {
+    // Only admins can delete users
+    if (userRole !== 'admin') {
+      return { error: "You don't have permission to delete users" };
+    }
+
     // First check if user is a teacher with courses
     const userToDelete = await prisma.user.findUnique({
       where: { id },
@@ -136,6 +180,11 @@ export async function deleteUser(id: string) {
 
     if (!userToDelete) {
       return { error: 'User not found' };
+    }
+
+    // Prevent deleting other admin users
+    if (userToDelete.role === 'admin' && id !== userId) {
+      return { error: "Cannot delete another administrator" };
     }
 
     // If user is a teacher with courses, we need to handle the courses
