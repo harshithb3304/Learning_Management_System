@@ -5,38 +5,43 @@ A role-based Learning Management System inspired by Google Classroom. This appli
 ## Features
 
 ### Authentication
+
 - Supabase Auth with Google Login
 - Role-based access control (RBAC) using Supabase Policies & Auth
 - Role-based access (Admin / Teacher / Student)
 
 ### Dashboard
+
 - Unified layout with scoped content per role
 - Responsive & accessible design with shadcn/ui components
 
 ### Role-Based Features
 
 #### Admin Capabilities
+
 - Manage all users (Create, Update, Delete)
 - Assign roles (Teacher / Student)
 - Manage all courses (CRUD)
 
 #### Teacher Capabilities
+
 - Create, Update, Delete own courses
 - Manage students within own courses (Add / Remove)
 - Upload and manage coursework
 
 #### Student Capabilities
+
 - View enrolled courses
 - Access coursework within enrolled courses
 
 ## Tech Stack
 
-| Layer        | Tech                        |
-|--------------|-----------------------------|  
-| Frontend     | Next.js, Tailwind CSS, shadcn/ui |
-| Backend/API  | Supabase Edge Functions , Prisma ORM|
-| Auth         | Supabase Auth (Google Login only) + RBAC using Policies |
-| Database     | Postgres (Supabase) |
+| Layer       | Tech                                                    |
+| ----------- | ------------------------------------------------------- |
+| Frontend    | Next.js, Tailwind CSS, shadcn/ui                        |
+| Backend/API | Supabase Edge Functions , Prisma ORM                    |
+| Auth        | Supabase Auth (Google Login only) + RBAC using Policies |
+| Database    | Postgres (Supabase)                                     |
 
 ## Getting Started
 
@@ -114,10 +119,10 @@ npm install
 
 Follow the official Supabase Prisma integration guide: [https://supabase.com/docs/guides/database/prisma](https://supabase.com/docs/guides/database/prisma)
 
-
 1. Configure Prisma for Supabase:
 
    The project already includes a `prisma/schema.prisma` file. Make sure it has the correct provider and datasource configuration:
+
 ```
    prisma
    datasource db {
@@ -125,9 +130,9 @@ Follow the official Supabase Prisma integration guide: [https://supabase.com/doc
    url       = env("DATABASE_URL")
    directUrl = env("DIRECT_URL")
    }
-   ```
+```
 
-   Note: The `directUrl` is required when using connection pooling with Supabase.
+Note: The `directUrl` is required when using connection pooling with Supabase.
 
 2. Generate Prisma client:
 
@@ -153,6 +158,8 @@ Follow the official Supabase Prisma integration guide: [https://supabase.com/doc
    npx prisma db seed
    ```
 
+6. Create public storage buckets named "course-resources" and "user-avatars" and enable all the policies.
+
 ### Step 8: Run the Application
 
 ```bash
@@ -165,5 +172,3 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
 Log in using Google authentication. The first user to register will automatically be assigned the admin role.
-
-
