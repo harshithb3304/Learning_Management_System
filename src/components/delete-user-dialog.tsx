@@ -13,9 +13,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { deleteUser } from "@/actions/users";
+import { deleteUser, getUserById } from "@/actions/users";
+import { User } from "@/generated/prisma";
 
 interface DeleteUserDialogProps {
+  currentUser: User;
   userId: string;
   userName: string;
   onDeleteSuccess?: () => void;
@@ -23,6 +25,7 @@ interface DeleteUserDialogProps {
 }
 
 export function DeleteUserDialog({
+  currentUser,
   userId,
   userName,
   onDeleteSuccess,
@@ -39,17 +42,20 @@ export function DeleteUserDialog({
 
     try {
       // Get the current user for authorization
-      const response = await fetch('/api/auth/session');
-      const session = await response.json();
-      const currentUser = session?.user;
-      
+
       if (!currentUser) {
         setError("Authentication error");
         setIsDeleting(false);
         return;
       }
-      
-      const result = await deleteUser(userId, currentUser.id, currentUser.role);
+
+      console.log("role:", currentUser.role);
+
+      const result = await deleteUser(
+        userId,
+        currentUser.id!,
+        currentUser.role!
+      );
 
       if (result.error) {
         setError(result.error);
@@ -72,11 +78,7 @@ export function DeleteUserDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="destructive"
-          size="sm"
-          disabled={disabled}
-        >
+        <Button variant="destructive" size="sm" disabled={disabled}>
           Remove
         </Button>
       </DialogTrigger>

@@ -80,6 +80,7 @@ export default async function UsersPage() {
     redirect("/dashboard/users");
   };
 
+  console.log(currentUser.role);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -186,6 +187,7 @@ export default async function UsersPage() {
                         </Dialog>
 
                         <DeleteUserDialog
+                          currentUser={currentUser}
                           userId={user.id}
                           userName={user.full_name}
                           disabled={user.role === "admin"}
